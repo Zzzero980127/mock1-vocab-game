@@ -467,7 +467,8 @@ const offline = () => `<div class="card"><h2>線上功能載入中…</h2><p cla
 $("#nav").onclick = e => { const b = e.target.closest("button"); if (b) showTab(b.dataset.tab); };
 $("#meBtn").onclick = () => showTab("me");
 function renderLogDot() {
-  const b = $("#logTab"), d = b.querySelector(".dot"), want = S.seenVer !== CHANGELOG[0].v;
+  const b = $("#logTab"); if (!b) return;   // 非開發者模式時分頁已移除
+  const d = b.querySelector(".dot"), want = S.seenVer !== CHANGELOG[0].v;
   if (want && !d) b.insertAdjacentHTML("beforeend", `<span class="dot"></span>`); if (!want && d) d.remove();
 }
 $("#clList").innerHTML = CHANGELOG.map((c, i) => `<div class="cl"><span class="v">v${c.v}</span> <span class="muted">${c.date}</span>${i === 0 ? '<span class="new">最新</span>' : ""}
