@@ -8,7 +8,7 @@ const KEY = "mock1-vocab-game";
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
   { v: "2.4", date: "2026-10-17", items: [
-    "新增「字庫」切換：課本 336 字／大考 4000 字（詞彙表 Lv1～4）／大考 6000 字（Lv1～6），統測、學測都用得到",
+    "新增「字庫」切換：課本 336 字／Lv1～3（約 3000 字，對應全樺模考第一、二次）／Lv1～4（約 4000 字，對應第三～五次）／Lv1～6（約 6000 字）",
     "字庫來源是大考中心《高中英文參考詞彙表》（111 學年起適用），可以用 Lv1～Lv6 按鈕只練某幾級",
     "大考字庫的中文是字典自動轉成繁體，個別字義可能不夠精準，以課本與老師為準",
   ] },
@@ -196,11 +196,12 @@ function gain(xp, extraCoins = 0) {
 function miss(x) { S.wrong[x.id] = (S.wrong[x.id] || 0) + 1; save(); hud(); }
 function hit(x) { S.known[x.id] = 1; if (S.wrong[x.id]) { if (--S.wrong[x.id] <= 0) delete S.wrong[x.id]; save(); hud(); } }
 
-const bankMax = () => S.bank === "c4000" ? 4 : S.bank === "c6000" ? 6 : 0;
+const bankMax = () => ({ c3000: 3, c4000: 4, c6000: 6 })[S.bank] || 0;
 const uni = () => S.bank === "book" ? W.filter(x => !x.b) : W.filter(x => x.b && x.lv <= bankMax());   // 目前字庫全部單字（出干擾選項用）
-const BANKS = [["book", "課本 336"], ["c4000", "大考 4000"], ["c6000", "大考 6000"]];
+const lvSel = () => { const m = S.lvs.filter(v => v <= bankMax()); return m.length ? m : [1, 2, 3, 4, 5, 6]; };   // 切字庫後選的級別超出範圍就當全選
+const BANKS = [["book", "課本 336"], ["c3000", "模考前兩次 3000"], ["c4000", "模考後三次 4000"], ["c6000", "大考 6000"]];
 function pool(filter) {
-  let p = S.bank === "book" ? W.filter(x => !x.b && S.lessons.includes(x.l)) : uni().filter(x => S.lvs.includes(x.lv));
+  let p = S.bank === "book" ? W.filter(x => !x.b && S.lessons.includes(x.l)) : uni().filter(x => lvSel().includes(x.lv));
   if (S.wrongOnly) p = p.filter(x => S.wrong[x.id]);
   return filter ? p.filter(filter) : p;
 }
