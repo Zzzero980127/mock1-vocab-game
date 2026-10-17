@@ -414,12 +414,18 @@ function openCreate() {
     <input class="field" id="rnName" maxlength="14" placeholder="房間名稱（可不填）" autocomplete="off">
     <div class="row" style="justify-content:space-between">人數上限<select class="field" id="rnMax" style="flex:0 0 110px">${[2, 3, 4, 5, 6, 8].map(k => `<option value="${k}" ${k === 4 ? "selected" : ""}>${k} 人</option>`).join("")}</select></div>
     <div class="row" style="justify-content:space-between">題數<select class="field" id="rnNq" style="flex:0 0 110px">${[10, 15, 20].map(k => `<option value="${k}">${k} 題</option>`).join("")}</select></div>
-    <div style="text-align:left"><b>單元</b><span class="muted">（可複選）</span></div>
+    <div class="row" style="justify-content:space-between"><span><b>單元</b><span class="muted">（可複選）</span></span><span class="row"><button class="btn small ghost" type="button" data-all="1">全選</button><button class="btn small ghost" type="button" data-all="0">全不選</button></span></div>
     <div class="seg" id="rnLs">${A.LESSONS.map(l => `<button class="chip" type="button" data-l="${esc(l)}" aria-pressed="true">${esc(l)}</button>`).join("")}</div>
     <label style="display:flex;gap:8px;align-items:center;text-align:left"><input type="checkbox" id="rnPub" checked> 公開房間（出現在大廳，別人可以直接加入）</label>
     <input class="field" id="rnPw" maxlength="12" placeholder="房間密碼（可不填）" autocomplete="off">
     <div class="row" style="justify-content:center"><button class="btn" data-ok type="button">建立</button><button class="btn ghost" data-close type="button">取消</button></div>`);
   m.addEventListener("click", async e => {
+    const all = e.target.closest("[data-all]");
+    if (all) {
+      const on = all.dataset.all === "1";
+      m.querySelectorAll("#rnLs .chip").forEach(x => { on ? sel.add(x.dataset.l) : sel.delete(x.dataset.l); x.setAttribute("aria-pressed", on); });
+      return;
+    }
     const c = e.target.closest(".chip");
     if (c) { const l = c.dataset.l; sel.has(l) ? sel.delete(l) : sel.add(l); c.setAttribute("aria-pressed", sel.has(l)); return; }
     const ok = e.target.closest("[data-ok]"); if (!ok) return;
