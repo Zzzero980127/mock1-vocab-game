@@ -98,6 +98,7 @@ nav button .dot{position:absolute;top:4px;right:5px;width:8px;height:8px;border-
 .timer i{display:block;height:100%;background:var(--cool);width:100%}
 .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
 .opt{all:unset;box-sizing:border-box;cursor:pointer;padding:14px;border-radius:12px;border:2px solid var(--line);font-size:17px;font-weight:600;display:flex;gap:10px;align-items:center;word-break:break-word}
+.btn kbd{font:700 11px var(--f-mono);border:1px solid currentColor;border-radius:5px;padding:0 5px;margin-left:4px;opacity:.7}
 .opt kbd{font:700 12px var(--f-mono);color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:1px 6px}
 .opt.en{font-family:var(--f-mono)}
 .opt:hover{border-color:var(--cool)}
@@ -210,7 +211,7 @@ th{color:var(--muted);font-weight:600;font-size:13px}
         <div class="chips" id="chips"></div>
         <div class="row">
           <label><input type="checkbox" id="wrongOnly"> 只練錯題本（<span id="wc">0</span>）</label>
-          <label><input type="checkbox" id="autoSay" checked> 答對自動唸單字</label>
+          <label><input type="checkbox" id="autoSay" checked> 出題自動唸英文</label>
           <label><input type="checkbox" id="sfx" checked> 音效</label>
           <span id="poolInfo"></span>
           <button class="link" id="clearWrong" type="button">清空錯題本</button>
@@ -228,9 +229,9 @@ th{color:var(--muted);font-weight:600;font-size:13px}
   <section id="tab-log" class="tab" hidden><div class="card"><h2>更新日誌</h2><div id="clList"></div></div></section>
 </div>
 
-<script src="words.js?v=2"></script>
-<script src="firebase-config.js?v=2"></script>
-<script src="app.js?v=2"></script>
-<script type="module" src="online.js?v=2"></script>
+<script src="words.js?v=3"></script>
+<script src="firebase-config.js?v=3"></script>
+<script src="app.js?v=3"></script>
+<script type="module" src="online.js?v=3"></script>
 </body>
 </html>

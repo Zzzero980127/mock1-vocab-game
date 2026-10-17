@@ -6,6 +6,11 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.1", date: "2026-10-17", items: [
+    "題目是英文時，一出題就先自動唸（設定改名為「出題自動唸英文」）",
+    "題目旁加「🔊 再聽一次」按鈕，快捷鍵 R；在輸入框裡打字時改用 Alt+R 或 Ctrl+空白鍵",
+    "配對消除點英文卡片時會唸出來",
+  ] },
   { v: "2.0", date: "2026-10-17", items: [
     "升等送金幣，每玩一場也會拿到一些金幣",
     "新增商店：解鎖「單字隕石」「聽音拼字」、網頁造型（深海、櫻花、森林、霓虹、黑金）、頭像、稱號",
@@ -104,6 +109,15 @@ const sfx = {
   levelup: () => tone([[523, 0, .12], [659, .1, .12], [784, .2, .12], [1047, .3, .12], [784, .42, .1], [1047, .52, .5]], "triangle", .18),
   ding: () => tone([[1175, 0, .15], [1568, .12, .3]], "sine", .2),
 };
+let replayFn = null;   // 目前題目的「再聽一次」
+const replayBtn = (id = "replay") => `<button class="btn ghost small" id="${id}" type="button" title="快捷鍵 R（輸入框裡用 Alt+R 或 Ctrl+空白）">🔊 再聽一次 <kbd>R</kbd></button>`;
+document.addEventListener("keydown", e => {
+  if (!replayFn || e.repeat) return;
+  const typing = e.target.matches?.("input, textarea");
+  const hot = typing ? (e.altKey && e.code === "KeyR") || (e.ctrlKey && e.code === "Space")
+    : (e.code === "KeyR" && !e.ctrlKey && !e.altKey && !e.metaKey);
+  if (hot) { e.preventDefault(); replayFn(); }
+});
 function toast(t) { const d = document.createElement("div"); d.className = "toast"; d.textContent = t; document.body.append(d); setTimeout(() => d.remove(), 2600); }
 function modal(html) {
   const m = document.createElement("div"); m.className = "modal"; m.innerHTML = `<div class="box">${html}</div>`;
@@ -267,8 +281,8 @@ $("#meBox").onclick = e => {
 /* ---------- 共用：舞台與結算 ---------- */
 let stopFn = null;
 const stage = $("#stage");
-function openStage(html) { if (curTab !== "games") showTab("games"); $("#gamesHome").hidden = true; stage.hidden = false; stage.innerHTML = html; window.scrollTo(0, 0); }
-function home() { if (stopFn) stopFn(); stopFn = null; stage.hidden = true; $("#gamesHome").hidden = false; hud(); }
+function openStage(html) { replayFn = null; if (curTab !== "games") showTab("games"); $("#gamesHome").hidden = true; stage.hidden = false; stage.innerHTML = html; window.scrollTo(0, 0); }
+function home() { replayFn = null; if (stopFn) stopFn(); stopFn = null; stage.hidden = true; $("#gamesHome").hidden = false; hud(); }
 const topBar = (name, hudHtml = "") => `<div class="bar"><button class="btn ghost" data-act="home" type="button">← 選單</button><div class="hud">${hudHtml}</div></div>`;
 stage.addEventListener("click", e => {
   const a = e.target.closest("[data-act]"); if (!a) return;
@@ -327,6 +341,7 @@ function playMatch(P) {
   stage.querySelector(".grid").onclick = e => {
     const b = e.target.closest(".tile"); if (!b) return;
     const o = tiles[b.dataset.i];
+    if (o.t === "en") sayIf(o.x.w);
     if (!sel) { sel = b; b.classList.add("sel"); sfx.tap(); return; }
     if (sel === b) { b.classList.remove("sel"); sel = null; return; }
     const o1 = tiles[sel.dataset.i];
@@ -370,7 +385,9 @@ function playQuiz(P, vs) {
     const opts = vs ? vs.qs[i].o.map(id => W[id]) : shuffle([x, ...pick(W.filter(y => y.c !== x.c && y.w !== x.w), 3, [enQ ? "c" : "w"])]);
     $("#qn").textContent = i + 1;
     $("#q").className = "q" + (enQ ? " en" : "");
-    $("#q").innerHTML = enQ ? `${esc(x.w)}<small>${esc(pos(x))}</small>` : `${esc(x.c)}<small>${esc(pos(x))}</small>`;
+    $("#q").innerHTML = enQ ? `${esc(x.w)}<small>${esc(pos(x))}</small><span style="display:block;margin-top:8px">${replayBtn()}</span>` : `${esc(x.c)}<small>${esc(pos(x))}</small>`;
+    replayFn = enQ ? () => speak(x.w) : null;
+    if (enQ) $("#replay").onclick = replayFn;
     $("#opts").innerHTML = opts.map((o, k) => `<button class="opt ${enQ ? "" : "en"}" data-k="${k}"><kbd>${k + 1}</kbd>${esc(enQ ? o.c : o.w)}</button>`).join("");
     if (enQ) sayIf(x.w);
     const t0 = performance.now(), T = 10000;
@@ -535,13 +552,14 @@ function playListen(P) {
   let i = 0, score = 0, right = 0, x, tries, done, dead = false; const missed = [];
   stopFn = () => { dead = true; };
   openStage(`${topBar("", `<span class="pill">題 <b id="qn">1</b>/${qs.length}</span><span class="pill">分數 <b id="sc">0</b></span>`)}
-    <div class="bar" style="justify-content:center;padding-top:20px"><button class="btn" id="play" type="button">▶ 再聽一次</button><button class="btn ghost" id="slow" type="button">慢速</button></div>
+    <div class="bar" style="justify-content:center;padding-top:20px"><button class="btn" id="play" type="button" title="快捷鍵 R；輸入框裡用 Alt+R 或 Ctrl+空白">🔊 再聽一次 <kbd>Alt+R</kbd></button><button class="btn ghost" id="slow" type="button">慢速</button></div>
     <div class="q" id="q" style="min-height:90px"></div>
     <div class="msg" id="msg"></div>
     <form class="type" id="fm" autocomplete="off"><input id="in" placeholder="輸入聽到的單字" autocapitalize="off" spellcheck="false"><button class="btn" type="submit">送出</button></form>
     <div class="bar" style="justify-content:center"><button class="btn ghost" id="skipB" type="button">看答案</button></div>`);
   const inp = $("#in"), msg = $("#msg"), q = $("#q");
   $("#play").onclick = () => { speak(x.w); inp.focus(); };
+  replayFn = () => speak(x.w);
   $("#slow").onclick = () => { speak(x.w, .55); inp.focus(); };
   const show = () => { q.className = "q en"; q.innerHTML = `${esc(x.w)}<small>${esc(pos(x))}・${esc(x.c)}</small>`; };
   function next() {
