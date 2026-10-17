@@ -783,7 +783,7 @@ function playListen(P) {
   let i = 0, score = 0, right = 0, x, tries, done, dead = false; const missed = [];
   stopFn = () => { dead = true; };
   openStage(`${topBar("", `<span class="pill">題 <b id="qn">1</b>/${qs.length}</span><span class="pill">分數 <b id="sc">0</b></span>`)}
-    <div class="bar" style="justify-content:center;padding-top:20px"><button class="btn" id="play" type="button" title="快捷鍵 R；輸入框裡用 Alt+R 或 Ctrl+空白">🔊 再聽一次 <kbd>Alt+R</kbd></button><button class="btn ghost" id="slow" type="button">慢速</button></div>
+    <div class="bar" style="justify-content:center;padding-top:20px"><button class="btn" id="play" type="button" title="快捷鍵 R；輸入框裡用 Tab 或 Alt+R">🔊 再聽一次 <kbd>Tab</kbd></button><button class="btn ghost" id="slow" type="button">慢速</button></div>
     <div class="q" id="q" style="min-height:90px"></div>
     <div class="msg" id="msg"></div>
     <form class="type" id="fm" autocomplete="off"><input id="in" placeholder="輸入聽到的單字" autocapitalize="off" spellcheck="false"><button class="btn" type="submit">送出</button></form>
