@@ -23,7 +23,7 @@ async function boot() {
     const [app, au, fs] = await Promise.all([import(CDN + "firebase-app.js"), import(CDN + "firebase-auth.js"), import(CDN + "firebase-firestore.js")]);
     F = { ...au, ...fs };
     const fb = app.initializeApp(cfg);
-    auth = au.getAuth(fb); db = fs.getFirestore(fb);
+    auth = au.getAuth(fb); db = fs.initializeFirestore(fb, { experimentalAutoDetectLongPolling: true });   // 某些網路下即時連線會卡住，自動改用長輪詢
     au.getRedirectResult(auth).catch(e => A.toast("登入失敗：" + e.code));
     au.onAuthStateChanged(auth, u => { user = u; loginUI(); u ? onLogin() : onLogout(); });
   } catch (e) { loadErr = "線上功能載入失敗，請檢查網路後重新整理。"; console.error(e); }
@@ -322,6 +322,10 @@ function enterRoom(code, round = -1) {
     if (r.board) r.board(); else if (A.tab === "vs") renderVs($("#vsBox"));
   }, e => console.error(e));
   if (A.tab === "vs") renderVs($("#vsBox"));
+  setTimeout(async () => {   // 3 秒還沒收到房間資料就主動抓一次，避免卡在「進入房間中」
+    if (room !== r || r.d) return;
+    try { const s = await F.getDocFromServer(ref); if (room === r && !r.d) onRoomSnap(r, s); } catch (e) { console.error(e); }
+  }, 3000);
 }
 function onRoomSnap(r, s) {
   if (room !== r) return;
