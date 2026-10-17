@@ -39,7 +39,7 @@ async function login() {
     if (e.code !== "auth/popup-closed-by-user") A.toast("登入失敗：" + e.code);
   }
 }
-const PROGRESS = ["xp", "coins", "gems", "best", "owned", "wrong", "games", "wins", "losses", "name", "avatar", "title", "skin", "lessons"];
+const PROGRESS = ["xp", "coins", "gems", "best", "owned", "wrong", "games", "wins", "losses", "name", "avatar", "title", "skin", "lessons", "vsDay"];
 function mergeBest(a = {}, b = {}) {
   const o = { ...a };
   for (const [k, v] of Object.entries(b)) o[k] = o[k] == null ? v : (k === "match" || k.startsWith("f_match")) ? Math.min(o[k], v) : Math.max(o[k], v);
@@ -87,7 +87,7 @@ function pub() {
   for (const [k, v] of Object.entries(S.best || {})) if (typeof v === "number") best[k] = v;
   return { name: S.name, avatar: S.avatar, title: S.title, skin: S.skin, xp: S.xp, level: A.lvOf(S.xp), coins: S.coins, best,
     owned: S.owned, wrong: S.wrong, lessons: S.lessons, games: S.games || 0, wins: S.wins || 0, losses: S.losses || 0,
-    gems: S.gems || 0, ach: S.ach || {}, achN: Object.keys(S.ach || {}).length, known: S.known || {}, first: S.first || {}, joined: S.joined || "",
+    gems: S.gems || 0, ach: S.ach || {}, achN: Object.keys(S.ach || {}).length, known: S.known || {}, first: S.first || {}, vsDay: S.vsDay || null, joined: S.joined || "",
     code: S.code || "", lastSeen: F.serverTimestamp(), updatedAt: F.serverTimestamp() };
 }
 async function push() {
@@ -236,12 +236,18 @@ function startMatch(ref, d, side) {
   function finish() {
     if (done) return; done = true; un?.(); clearTimeout(tm);
     const S = A.S, quit = opp.p < 0, res = quit || mine.score > opp.s ? "win" : mine.score < opp.s ? "lose" : "tie";
-    if (res === "win") S.wins = (S.wins || 0) + 1; if (res === "lose") S.losses = (S.losses || 0) + 1;
+    // 防刷：兩個帳號互打會雙贏，所以每天只有前 5 場有獎勵、同一個對手最多 2 場，對手棄權不算
+    const oppId = side === "a" ? d.b : d.a, dk = new Date().toLocaleDateString("sv");
+    if (!S.vsDay || S.vsDay.d !== dk) S.vsDay = { d: dk, n: 0, o: {} };
+    const rewarded = !quit && S.vsDay.n < 5 && (S.vsDay.o[oppId] || 0) < 2;
+    if (rewarded) { S.vsDay.n++; S.vsDay.o[oppId] = (S.vsDay.o[oppId] || 0) + 1; }
+    if (rewarded && res === "win") S.wins = (S.wins || 0) + 1; if (res === "lose") S.losses = (S.losses || 0) + 1;
     S.games++;
-    const coins = A.gain(mine.right * 4, { win: 40, lose: 10, tie: 20 }[res]); A.checkAch(); A.sfx[res === "lose" ? "bad" : "win"]();
+    const xpGet = rewarded ? mine.right * 4 : 0;
+    const coins = A.gain(xpGet, rewarded ? { win: 20, lose: 0, tie: 5 }[res] : 0); A.checkAch(); A.sfx[res === "lose" ? "bad" : "win"]();
     F.updateDoc(ref, { status: "done" }).catch(() => {});
     A.openStage(`${A.topBar()}<div class="big">${{ win: "勝利！", lose: "惜敗", tie: "平手" }[res]}</div>
-      <p class="center">你 <b>${mine.score}</b> ： <b>${quit ? "棄權" : opp.s}</b> ${esc(oppName)}<br>獲得 ${mine.right * 4} XP・<b style="color:var(--gold)">${coins} 金幣</b></p>
+      <p class="center">你 <b>${mine.score}</b> ： <b>${quit ? "棄權" : opp.s}</b> ${esc(oppName)}<br>${rewarded ? `獲得 ${xpGet} XP・<b style="color:var(--gold)">${coins} 金幣</b>` : `<span class="muted">${quit ? "對手棄權，不計獎勵" : "今天的對戰獎勵已達上限（每天 5 場、同一人 2 場）"}</span>`}</p>
       ${A.missedTable(mine.missed)}
       <div class="bar" style="justify-content:center"><button class="btn" data-act="vs" type="button">回好友列表</button><button class="btn ghost" data-act="home" type="button">回選單</button></div>`);
     ON.dirty(true);
@@ -285,7 +291,7 @@ function renderVs(box) {
       <div class="type"><input class="field" id="fcode" maxlength="6" placeholder="輸入朋友的 6 位代碼" autocapitalize="characters" autocomplete="off"><button class="btn" data-add type="button">加好友</button></div>
       <div class="row"><button class="btn small ghost" data-copy type="button">複製我的代碼</button></div></div>
     <div class="card"><div class="bar"><h2>好友（${list.length}）</h2><span class="status on"><i></i>${onlineN} 人在線</span></div>
-      <p class="muted" style="margin:0">對戰：同一組 10 題快問，限時作答，看誰分數高。贏 +40 金幣、平手 +20、輸也有 +10。</p>
+      <p class="muted" style="margin:0">對戰：同一組 10 題快問，限時作答，看誰分數高。贏 +20 金幣、平手 +5。為了防刷，每天前 5 場、同一位好友最多 2 場有獎勵，對手棄權不算。</p>
       <div class="list">${list.length ? list.map(([id, d]) => `<div class="person"><span class="av">${esc(d.avatar || "🙂")}</span>
         <div class="info"><b>${A.nameHtml(d.name || "玩家", id === devUid)}</b><small>${A.titleHtml(d.title || "", id === devUid)}・Lv ${A.lvOf(d.xp || 0)}・</small>${statusHtml(d)}</div>
         <button class="btn small" data-vs="${id}" type="button" ${waiting ? "disabled" : ""}>挑戰</button>
