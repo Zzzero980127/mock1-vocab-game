@@ -1,11 +1,17 @@
 /* 一模單字遊樂場：遊戲、金幣、商店、個人資料（離線也能用）。線上功能（登入、好友、對戰、排行）在 online.js */
-const W = DATA.map((x, i) => ({ ...x, id: i }));
+const BOOKN = DATA.length;   // 課本單字 id 0..BOOKN-1 永遠不變；大考詞彙表接在後面（舊紀錄不會錯亂）
+const W = DATA.map((x, i) => ({ ...x, id: i })).concat(typeof BANK === "undefined" ? [] : BANK.map((r, i) => ({ w: r[0], p: r[1], c: r[2], l: "Lv" + r[3], lv: r[3], b: 1, id: BOOKN + i })));
 const $ = s => document.querySelector(s);
-const LESSONS = [...new Set(W.map(x => x.l))];
+const LESSONS = [...new Set(W.filter(x => !x.b).map(x => x.l))];
 const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.4", date: "2026-10-17", items: [
+    "新增「字庫」切換：課本 336 字／大考 4000 字（詞彙表 Lv1～4）／大考 6000 字（Lv1～6），統測、學測都用得到",
+    "字庫來源是大考中心《高中英文參考詞彙表》（111 學年起適用），可以用 Lv1～Lv6 按鈕只練某幾級",
+    "大考字庫的中文是字典自動轉成繁體，個別字義可能不夠精準，以課本與老師為準",
+  ] },
   { v: "2.3", date: "2026-10-17", items: [
     "史詩、傳說成就解鎖時有全螢幕特效：旋轉光芒、獎盃砸下、火花爆開＋專屬音效",
     "已解鎖的史詩、傳說成就卡片會有流動的光邊",
@@ -72,7 +78,7 @@ const ACH = [
   { id: "lv10", name: "十全十美", desc: "升到 Lv 10", title: "十級玩家", gems: 8, tier: 1, p: () => [lvOf(S.xp), 10] },
   { id: "lv20", name: "一模霸主", desc: "升到 Lv 20", title: "一模霸主", gems: 20, tier: 2, p: () => [lvOf(S.xp), 20] },
   { id: "w100", name: "百字斬", desc: "答對過 100 個不同的單字", title: "百字斬", gems: 5, tier: 1, p: () => [knownN(), 100] },
-  { id: "wall", name: "單字之神", desc: "336 個單字全部答對過", title: "單字之神", gems: 30, tier: 3, p: () => [knownN(), W.length] },
+  { id: "wall", name: "單字之神", desc: "336 個課本單字全部答對過", title: "單字之神", gems: 30, tier: 3, p: () => [Object.keys(S.known || {}).filter(i => i < BOOKN).length, BOOKN] },
   { id: "m15", name: "配對快手", desc: "配對消除 15 秒內完成", title: "配對快手", gems: 5, tier: 1, p: () => [S.best.match && S.best.match <= 15 ? 1 : 0, 1] },
   { id: "m10", name: "閃電配對", desc: "配對消除 10 秒內完成", title: "閃電手", gems: 10, tier: 2, p: () => [S.best.match && S.best.match <= 10 ? 1 : 0, 1] },
   { id: "q2500", name: "連擊大師", desc: "快問連擊拿到 2500 分", title: "連擊大師", gems: 5, tier: 1, p: () => [S.best.quiz || 0, 2500] },
@@ -89,7 +95,7 @@ const TIERS = [["普通", "var(--muted)"], ["稀有", "var(--cool)"], ["史詩",
 const FREE = ["game:match", "game:quiz", "game:spell", "skin:default", "av:🙂", "av:🐱", "av:🐶", "title:單字新手"];
 
 const lvOf = xp => Math.floor(xp / 300) + 1;
-let S = { xp: 0, wrong: {}, best: {}, lessons: LESSONS.slice(), wrongOnly: false, autoSay: true, sfx: true,
+let S = { xp: 0, wrong: {}, best: {}, lessons: LESSONS.slice(), bank: "book", lvs: [1, 2, 3, 4, 5, 6], wrongOnly: false, autoSay: true, sfx: true,
   owned: FREE.slice(), skin: "default", name: "", avatar: "🙂", title: "單字新手", games: 0, wins: 0, losses: 0, seenVer: "", gems: 0, ach: {}, known: {}, joined: "" };
 try { Object.assign(S, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (e) {}
 if (S.coins === undefined) S.coins = 100 + (lvOf(S.xp) - 1) * 60;   // 舊玩家補發已升過的等級
@@ -190,8 +196,11 @@ function gain(xp, extraCoins = 0) {
 function miss(x) { S.wrong[x.id] = (S.wrong[x.id] || 0) + 1; save(); hud(); }
 function hit(x) { S.known[x.id] = 1; if (S.wrong[x.id]) { if (--S.wrong[x.id] <= 0) delete S.wrong[x.id]; save(); hud(); } }
 
+const bankMax = () => S.bank === "c4000" ? 4 : S.bank === "c6000" ? 6 : 0;
+const uni = () => S.bank === "book" ? W.filter(x => !x.b) : W.filter(x => x.b && x.lv <= bankMax());   // 目前字庫全部單字（出干擾選項用）
+const BANKS = [["book", "課本 336"], ["c4000", "大考 4000"], ["c6000", "大考 6000"]];
 function pool(filter) {
-  let p = W.filter(x => S.lessons.includes(x.l));
+  let p = S.bank === "book" ? W.filter(x => !x.b && S.lessons.includes(x.l)) : uni().filter(x => S.lvs.includes(x.lv));
   if (S.wrongOnly) p = p.filter(x => S.wrong[x.id]);
   return filter ? p.filter(filter) : p;
 }
@@ -220,12 +229,27 @@ function hud() {
   }).join("");
 }
 function renderChips() {
-  const all = S.lessons.length === LESSONS.length;
-  $("#chips").innerHTML = `<button class="chip" data-l="*" aria-pressed="${all}">全部</button>` +
-    LESSONS.map(l => `<button class="chip" data-l="${l}" aria-pressed="${!all && S.lessons.includes(l)}">${l}</button>`).join("");
+  const bk = BANKS.map(([k, n]) => `<button class="chip" data-bank="${k}" aria-pressed="${S.bank === k}">${n}</button>`).join("") + `<span style="flex-basis:100%"></span>`;
+  if (S.bank === "book") {
+    const all = S.lessons.length === LESSONS.length;
+    $("#chips").innerHTML = bk + `<button class="chip" data-l="*" aria-pressed="${all}">全部</button>` +
+      LESSONS.map(l => `<button class="chip" data-l="${l}" aria-pressed="${!all && S.lessons.includes(l)}">${l}</button>`).join("");
+  } else {
+    const LV = Array.from({ length: bankMax() }, (_, i) => i + 1), sel = S.lvs.filter(v => v <= bankMax()), all = sel.length === LV.length;
+    $("#chips").innerHTML = bk + `<button class="chip" data-lv="*" aria-pressed="${all}">全部</button>` +
+      LV.map(v => `<button class="chip" data-lv="${v}" aria-pressed="${!all && sel.includes(v)}">Lv${v}</button>`).join("");
+  }
 }
 $("#chips").onclick = e => {
-  const l = e.target.dataset.l; if (!l) return;
+  const t = e.target.closest("button"); if (!t) return;
+  if (t.dataset.bank) { S.bank = t.dataset.bank; save(); renderChips(); hud(); return; }
+  if (t.dataset.lv) {
+    const LV = Array.from({ length: bankMax() }, (_, i) => i + 1), v = t.dataset.lv, sel = S.lvs.filter(x => x <= bankMax());
+    if (v === "*") S.lvs = [1, 2, 3, 4, 5, 6];
+    else { const n = +v; if (sel.length === LV.length) S.lvs = [n]; else { S.lvs = sel.includes(n) ? sel.filter(x => x !== n) : [...sel, n]; if (!S.lvs.length) S.lvs = [1, 2, 3, 4, 5, 6]; } }
+    save(); renderChips(); hud(); return;
+  }
+  const l = t.dataset.l; if (!l) return;
   if (l === "*") S.lessons = LESSONS.slice();
   else if (S.lessons.length === LESSONS.length) S.lessons = [l];
   else { S.lessons = S.lessons.includes(l) ? S.lessons.filter(x => x !== l) : [...S.lessons, l]; if (!S.lessons.length) S.lessons = LESSONS.slice(); }
@@ -433,16 +457,17 @@ function start(m) {
   if (!owns("game:" + m)) { showTab("shop"); toast(`「${o.name}」要 ${o.price} 金幣解鎖`); return; }
   const need = { match: 6, quiz: 4, rock: 3, spell: 3, listen: 3 }[m];
   const f = m === "rock" || m === "listen" ? typable : m === "spell" ? (x => /^[a-z]{3,12}$/i.test(x.w)) : null;
-  if (pool(f).length < need) { toast(S.wrongOnly ? "錯題本的字太少，先關掉「只練錯題本」" : "選的課次單字太少，多選幾課"); home(); return; }
+  if (pool(f).length < need) { toast(S.wrongOnly ? "錯題本的字太少，先關掉「只練錯題本」" : "選的範圍單字太少，多選幾個課次或級別"); home(); return; }
   ({ match: playMatch, quiz: playQuiz, rock: playRock, spell: playSpell, listen: playListen })[m](pool(f));
 }
 $("#menu").onclick = e => { const b = e.target.closest(".mode"); if (b) start(b.dataset.m); };
 
 // 好友對戰的題目：兩邊用同一組題目與選項
 function makeVsQuestions(n = 10) {
-  return pick(W, n, ["w"]).map(x => {
+  const BW = W.filter(x => !x.b);   // 好友對戰固定用課本單字
+  return pick(BW, n, ["w"]).map(x => {
     const enQ = Math.random() < .5;
-    const others = pick(W.filter(y => y.c !== x.c && y.w !== x.w), 3, [enQ ? "c" : "w"]);
+    const others = pick(BW.filter(y => y.c !== x.c && y.w !== x.w), 3, [enQ ? "c" : "w"]);
     return { id: x.id, enQ, o: shuffle([x, ...others]).map(y => y.id) };
   });
 }
@@ -501,7 +526,7 @@ function playQuiz(P, vs) {
       return result("quiz", score, `答對 ${right}/${qs.length}${best ? "・新紀錄！" : ""}`, missed, right * 4);
     }
     const x = qs[i], enQ = vs ? vs.qs[i].enQ : Math.random() < .5; locked = false;
-    const opts = vs ? vs.qs[i].o.map(id => W[id]) : shuffle([x, ...pick(W.filter(y => y.c !== x.c && y.w !== x.w), 3, [enQ ? "c" : "w"])]);
+    const opts = vs ? vs.qs[i].o.map(id => W[id]) : shuffle([x, ...pick((vs ? W : uni()).filter(y => y.c !== x.c && y.w !== x.w), 3, [enQ ? "c" : "w"])]);
     $("#qn").textContent = i + 1;
     $("#q").className = "q" + (enQ ? " en" : "");
     $("#q").innerHTML = enQ ? `${esc(x.w)}<small>${esc(pos(x))}</small><span style="display:block;margin-top:8px">${replayBtn()}</span>` : `${esc(x.c)}<small>${esc(pos(x))}</small>`;
@@ -711,7 +736,7 @@ function playListen(P) {
   next();
 }
 
-$("#total").textContent = W.length;
+$("#total").textContent = BOOKN;
 applySkin(); renderChips(); hud(); renderLogDot(); setTimeout(checkAch, 800);
 window.APP = { get S() { return S; }, set S(v) { S = v; }, save, checkAch, nameHtml, titleHtml, DEV_CODE, toast, sfx, modal, esc, lvOf, gain, owns, FREE, renderTop, hud, applySkin, renderChips,
   refreshTab, showTab, openStage, topBar, home, missedTable, playQuiz, makeVsQuestions, armed, get tab() { return curTab; } };
