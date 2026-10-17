@@ -7,6 +7,9 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.7.13", date: "2026-10-17", items: [
+    "極光上下起伏的幅度縮小，簾幕更平穩"
+  ]},
   { v: "2.7.12", date: "2026-10-17", items: [
     "極光放慢速度，並改成一整片柔和的簾幕，不再有燈柱般的垂直條紋"
   ]},
@@ -341,8 +344,8 @@ function auroraCanvas(on) {
     strips.forEach((st, k) => {
       const base = [.42, .55, .32][k], ph = k * 2.1;
       for (let x = 0; x < W; x++) {
-        const y = H * (base + .1 * Math.sin(x * .016 + t * .5 + ph) + .06 * Math.sin(x * .037 - t * .8 + ph) + .02 * Math.sin(x * .045 + t * 1.2));
-        const h = H * (.3 + .13 * Math.sin(x * .02 + t * .4 + ph * 2) + .08 * Math.sin(x * .035 - t * .8));
+        const y = H * (base + .04 * Math.sin(x * .016 + t * .5 + ph) + .025 * Math.sin(x * .037 - t * .8 + ph) + .01 * Math.sin(x * .045 + t * 1.2));
+        const h = H * (.3 + .05 * Math.sin(x * .02 + t * .4 + ph * 2) + .03 * Math.sin(x * .035 - t * .8));
         let a = .6 + .4 * Math.sin(x * .02 + t * 1.2 + ph) * Math.sin(x * .011 - t * .5 + ph);
         ctx.globalAlpha = Math.max(0, Math.min(1, a)) * .85;
         ctx.drawImage(st, 0, 0, 1, 64, x, y - h, 1, h);
