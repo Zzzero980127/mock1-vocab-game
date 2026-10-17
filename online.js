@@ -517,7 +517,7 @@ function renderRoom(box) {
   if (!d) { box.innerHTML = `<div class="card"><p class="muted">進入房間中…</p></div>`; return; }
   const isHost = d.host === user.uid, idle = d.status === "waiting", canStart = idle || (!r.inGame && !othersBusy(r));
   const ms = [...r.members].sort((a, b) => (a[0] === d.host ? -1 : b[0] === d.host ? 1 : 0) || (a[1].at?.toMillis?.() || 0) - (b[1].at?.toMillis?.() || 0));
-  const fl = friendIds.map(id => [id, friends.get(id)]).filter(([, f]) => f && !r.members.has(id))
+  const fl = friendIds.map(id => [id, friends.get(id)]).filter(([id, f]) => f && !r.members.has(id))
     .sort((x, y) => (Date.now() - seenMs(x[1]) < ONLINE_MS ? 0 : 1) - (Date.now() - seenMs(y[1]) < ONLINE_MS ? 0 : 1));
   box.innerHTML = `
     <div class="card"><div class="bar"><h2>${d.locked ? "🔒 " : ""}${esc(d.name)}</h2><button class="btn small ghost" data-leave type="button">${isHost ? "關閉房間" : "離開房間"}</button></div>
