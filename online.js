@@ -85,7 +85,7 @@ async function onLogin() {
   } catch (e) { console.error(e); A.toast("讀取雲端存檔失敗：" + (e.code || e.message)); }
   beat(); clearInterval(beatTimer); beatTimer = setInterval(beat, 60000);
   F.getDoc(F.doc(db, "codes", A.DEV_CODE)).then(c => { devUid = c.exists() ? c.data().uid : ""; A.refreshTab(); }).catch(() => {});
-  listenFriends(); listenInvites(); listenRequests(); listenLobby();
+  listenFriends(); listenInvites(); listenRequests(); listenLobby(); rejoinRoom();
   A.refreshTab();
 }
 function onLogout() {
@@ -180,6 +180,8 @@ async function removeFriend(fid) {
 /* ---------- 房間對戰 ---------- */
 const ROOM_TTL = 30 * 60000;          // 大廳只列出 30 分鐘內開的房間
 let room = null, lobbyRooms = [];     // room = 我所在的房間 { code, ref, d, members, round, inGame, sawMe, closed, unRoom, unMem, board }
+const ROOM_KEY = "mock1-vocab-room";   // 重新整理後自動回到原本的房間
+const saveRoom = c => { try { c ? localStorage.setItem(ROOM_KEY, c) : localStorage.removeItem(ROOM_KEY); } catch (e) { /* 無痕模式等情況存不了就算了 */ } };
 const nowMs = d => d?.createdAt?.toMillis ? d.createdAt.toMillis() : Date.now();
 const lessonText = d => !d.lessons?.length || d.lessons.length === A.LESSONS.length ? "全部單元" : d.lessons.join("、");
 const bookCount = ls => A.WORDS_BOOK().filter(x => ls.includes(x.l)).length;
@@ -306,8 +308,9 @@ async function joinRoom(code, o = {}) {
     A.sfx.tap(); A.showTab("vs"); enterRoom(code);
   } catch (e) { console.error(e); A.toast("加入房間失敗：" + (e.code || e.message)); }
 }
-function enterRoom(code) {
-  const ref = F.doc(db, "rooms", code), r = room = { code, ref, d: null, members: new Map(), round: -1, inGame: false, sawMe: false, closed: false, board: null };
+function enterRoom(code, round = -1) {
+  saveRoom(code);
+  const ref = F.doc(db, "rooms", code), r = room = { code, ref, d: null, members: new Map(), round, inGame: false, sawMe: false, closed: false, board: null };
   r.unRoom = F.onSnapshot(ref, s => onRoomSnap(r, s), e => { console.error(e); exitRoom("房間連線失敗：" + (e.code || e.message)); });
   r.unMem = F.onSnapshot(F.collection(ref, "members"), s => {
     if (room !== r) return;
@@ -328,7 +331,7 @@ function onRoomSnap(r, s) {
   if (d.status === "playing" && d.round !== r.round && r.sawMe) startRoomGame();
   else if (A.tab === "vs" && !r.inGame) renderVs($("#vsBox"));
 }
-function dropRoom() { const r = room; if (!r) return null; room = null; r.unRoom?.(); r.unMem?.(); r.board = null; return r; }
+function dropRoom() { const r = room; if (!r) return null; room = null; saveRoom(""); r.unRoom?.(); r.unMem?.(); r.board = null; return r; }
 function exitRoom(msg) {
   const r = dropRoom(); if (!r) return;
   if (r.inGame) A.home();
@@ -347,6 +350,17 @@ async function leaveRoom() {
   } catch (e) { console.error(e); }
   if (A.tab === "vs") renderVs($("#vsBox"));
 }
+async function rejoinRoom() {
+  let code = ""; try { code = localStorage.getItem(ROOM_KEY) || ""; } catch (e) { /* 讀不到就不回房 */ }
+  if (!code || room) return;
+  try {
+    const ref = F.doc(db, "rooms", code), [rs, ms] = await Promise.all([F.getDoc(ref), F.getDoc(F.doc(ref, "members", user.uid))]);
+    if (!rs.exists() || !ms.exists() || rs.data().status === "closed") return saveRoom("");
+    const d = rs.data(), playing = d.status === "playing";
+    if (playing) F.updateDoc(ms.ref, { p: -1 }).catch(() => {});   // 那一局我已經斷線，不重打，算棄權
+    enterRoom(code, playing ? d.round : -1); A.showTab("vs"); A.toast("已回到你的房間");
+  } catch (e) { console.error(e); }
+}
 async function kickMember(uid) { try { await F.deleteDoc(F.doc(room.ref, "members", uid)); } catch (e) { A.toast("操作失敗：" + (e.code || e.message)); } }
 async function inviteFriend(fid) {
   const r = room, d = r?.d; if (!d) return;
@@ -359,7 +373,7 @@ const othersBusy = r => [...r.members].some(([id, m]) => id !== user.uid && m.r 
 async function startRoom() {
   const r = room, d = r?.d; if (!d || d.host !== user.uid) return;
   if (r.members.size < 2) return A.toast("至少要 2 個人才能開始");
-  if (d.status !== "waiting" || othersBusy(r)) return A.toast("還有人在作答，等大家打完");
+  if (r.inGame || (d.status !== "waiting" && othersBusy(r))) return A.toast("還有人在作答，等大家打完");
   try { await F.updateDoc(r.ref, { status: "playing", qs: A.makeVsQuestions(d.nq, d.lessons), round: (d.round || 0) + 1, startedAt: F.serverTimestamp() }); }
   catch (e) { A.toast("開始失敗：" + (e.code || e.message)); }
 }
@@ -492,7 +506,7 @@ function searchBox() {
 function renderRoom(box) {
   const r = room, d = r.d;
   if (!d) { box.innerHTML = `<div class="card"><p class="muted">進入房間中…</p></div>`; return; }
-  const isHost = d.host === user.uid, idle = d.status === "waiting";
+  const isHost = d.host === user.uid, idle = d.status === "waiting", canStart = idle || (!r.inGame && !othersBusy(r));
   const ms = [...r.members].sort((a, b) => (a[0] === d.host ? -1 : b[0] === d.host ? 1 : 0) || (a[1].at?.toMillis?.() || 0) - (b[1].at?.toMillis?.() || 0));
   const fl = friendIds.map(id => [id, friends.get(id)]).filter(([, f]) => f && !r.members.has(id))
     .sort((x, y) => (Date.now() - seenMs(x[1]) < ONLINE_MS ? 0 : 1) - (Date.now() - seenMs(y[1]) < ONLINE_MS ? 0 : 1));
@@ -506,7 +520,7 @@ function renderRoom(box) {
         ${!me && !fr ? `<button class="btn small" data-befriend="${id}" type="button">加好友</button>` : ""}
         ${isHost && !me ? `<button class="btn small ghost" data-kick="${id}" type="button" aria-label="請出房間">✕</button>` : ""}</div>`;
     }).join("")}</div>
-      ${isHost ? `<button class="btn" data-start type="button" ${r.members.size < 2 || !idle ? "disabled" : ""}>${idle ? (r.members.size < 2 ? "至少 2 人才能開始" : "開始對戰") : "對戰進行中…"}</button>`
+      ${isHost ? `<button class="btn" data-start type="button" ${r.members.size < 2 || !canStart ? "disabled" : ""}>${canStart ? (r.members.size < 2 ? "至少 2 人才能開始" : "開始對戰") : "對戰進行中…"}</button>`
         : `<p class="muted" style="margin:0">${idle ? "等房主開始對戰…" : "對戰進行中…"}</p>`}
       <p class="muted" style="margin:0">贏 +20 金幣、平手 +5。為了防刷，每天前 5 場、同一位對手最多 2 場有獎勵，對手棄權不算。</p></div>
     <div class="card"><h2>邀請好友</h2>${r.members.size >= d.max ? `<p class="muted" style="margin:0">房間已滿。</p>`
