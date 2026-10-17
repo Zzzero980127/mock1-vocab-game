@@ -7,6 +7,9 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.7.12", date: "2026-10-17", items: [
+    "極光放慢速度，並改成一整片柔和的簾幕，不再有燈柱般的垂直條紋"
+  ]},
   { v: "2.7.11", date: "2026-10-17", items: [
     "極光造型加上星軌：整片星空繞著天極緩慢旋轉，每顆星拖著弧形光尾；極光價格調為 50 寶石（已購買的不受影響）"
   ]},
@@ -320,7 +323,7 @@ function auroraCanvas(on) {
   size(); addEventListener("resize", size);
   const draw = ms => {
     if (document.documentElement.dataset.skin !== "aurora") { auroraCanvas(false); return; }
-    const t = ms / 1000 * 1.6, W = cv.width, H = cv.height;
+    const t = ms / 1000 * .6, W = cv.width, H = cv.height;
     ctx.clearRect(0, 0, W, H);
     const px = W * .58, py = H * 1.05, rot = ms / 1000 * .035;   // 星軌：繞著天極緩慢旋轉的弧線
     ctx.lineCap = "round"; ctx.lineWidth = Math.max(1, W / 900);
@@ -338,10 +341,9 @@ function auroraCanvas(on) {
     strips.forEach((st, k) => {
       const base = [.42, .55, .32][k], ph = k * 2.1;
       for (let x = 0; x < W; x++) {
-        const y = H * (base + .1 * Math.sin(x * .016 + t * .5 + ph) + .06 * Math.sin(x * .037 - t * .8 + ph) + .025 * Math.sin(x * .09 + t * 1.6));
-        const h = H * (.3 + .13 * Math.sin(x * .02 + t * .4 + ph * 2) + .08 * Math.sin(x * .07 - t * 1.1));
-        let a = .55 + .45 * Math.sin(x * .05 + t * 1.2 + ph) * Math.sin(x * .013 - t * .5 + ph);
-        a *= .6 + .4 * Math.sin(x * .8 + t * 3 + k) ** 2;   // 細小的垂直光絲
+        const y = H * (base + .1 * Math.sin(x * .016 + t * .5 + ph) + .06 * Math.sin(x * .037 - t * .8 + ph) + .02 * Math.sin(x * .045 + t * 1.2));
+        const h = H * (.3 + .13 * Math.sin(x * .02 + t * .4 + ph * 2) + .08 * Math.sin(x * .035 - t * .8));
+        let a = .6 + .4 * Math.sin(x * .02 + t * 1.2 + ph) * Math.sin(x * .011 - t * .5 + ph);
         ctx.globalAlpha = Math.max(0, Math.min(1, a)) * .85;
         ctx.drawImage(st, 0, 0, 1, 64, x, y - h, 1, h);
       }
