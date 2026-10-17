@@ -8,7 +8,7 @@ const KEY = "mock1-vocab-game";
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
   { v: "2.7.6", date: "2026-10-17", items: [
-    "輸入框裡重聽發音的快捷鍵改成 Tab（Ctrl+空白會跟中文輸入法切換打架，已移除）；Alt+R 仍可用"
+    "輸入框裡重聽發音的快捷鍵改成數字 1（Ctrl+空白、Tab 都會被系統搶走，已移除）；Alt+R 仍可用"
   ]},
   { v: "2.7.5", date: "2026-10-17", items: [
     "拼字工坊多了「🔊 聽發音」按鈕（不扣分，可重複聽），每題開始也會自動唸一次（跟著「自動發音」設定）"
@@ -231,11 +231,11 @@ const sfx = {
   ding: () => tone([[1175, 0, .15], [1568, .12, .3]], "sine", .2),
 };
 let replayFn = null;   // 目前題目的「再聽一次」
-const replayBtn = (id = "replay") => `<button class="btn ghost small" id="${id}" type="button" title="快捷鍵 R（輸入框裡用 Tab 或 Alt+R）">🔊 再聽一次 <kbd>R</kbd></button>`;
+const replayBtn = (id = "replay") => `<button class="btn ghost small" id="${id}" type="button" title="快捷鍵 R（輸入框裡用數字 1 或 Alt+R）">🔊 再聽一次 <kbd>R</kbd></button>`;
 document.addEventListener("keydown", e => {
   if (!replayFn || e.repeat) return;
   const typing = e.target.matches?.("input, textarea");
-  const hot = typing ? e.code === "Tab" || (e.altKey && e.code === "KeyR")
+  const hot = typing ? e.key === "1" || e.code === "Numpad1" || (e.altKey && e.code === "KeyR")
     : (e.code === "KeyR" && !e.ctrlKey && !e.altKey && !e.metaKey);
   if (hot) { e.preventDefault(); replayFn(); }
 });
@@ -783,7 +783,7 @@ function playListen(P) {
   let i = 0, score = 0, right = 0, x, tries, done, dead = false; const missed = [];
   stopFn = () => { dead = true; };
   openStage(`${topBar("", `<span class="pill">題 <b id="qn">1</b>/${qs.length}</span><span class="pill">分數 <b id="sc">0</b></span>`)}
-    <div class="bar" style="justify-content:center;padding-top:20px"><button class="btn" id="play" type="button" title="快捷鍵 R；輸入框裡用 Tab 或 Alt+R">🔊 再聽一次 <kbd>Tab</kbd></button><button class="btn ghost" id="slow" type="button">慢速</button></div>
+    <div class="bar" style="justify-content:center;padding-top:20px"><button class="btn" id="play" type="button" title="快捷鍵 R；輸入框裡用 數字 1 或 Alt+R">🔊 再聽一次 <kbd>1</kbd></button><button class="btn ghost" id="slow" type="button">慢速</button></div>
     <div class="q" id="q" style="min-height:90px"></div>
     <div class="msg" id="msg"></div>
     <form class="type" id="fm" autocomplete="off"><input id="in" placeholder="輸入聽到的單字" autocapitalize="off" spellcheck="false"><button class="btn" type="submit">送出</button></form>
