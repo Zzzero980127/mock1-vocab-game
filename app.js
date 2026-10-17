@@ -348,7 +348,7 @@ function renderLogDot() {
 }
 $("#clList").innerHTML = CHANGELOG.map((c, i) => `<div class="cl"><span class="v">v${c.v}</span> <span class="muted">${c.date}</span>${i === 0 ? '<span class="new">最新</span>' : ""}
   <ul>${c.items.map(t => `<li>${esc(t)}</li>`).join("")}</ul></div>`).join("");
-$("#verText").textContent = `v${CHANGELOG[0].v}`;
+$("#verText")?.replaceChildren(`v${CHANGELOG[0].v}`);
 
 /* ---------- 成就 ---------- */
 const today = () => new Date().toLocaleDateString("sv");
@@ -799,7 +799,7 @@ function playListen(P) {
   next();
 }
 
-$("#total").textContent = BOOKN;
+$("#total")?.replaceChildren(String(BOOKN));
 applySkin(); renderChips(); hud(); renderLogDot(); setTimeout(checkAch, 800);
 window.APP = { get S() { return S; }, set S(v) { S = v; }, save, checkAch, nameHtml, titleHtml, DEV_CODE, toast, sfx, modal, esc, lvOf, gain, owns, FREE, renderTop, hud, applySkin, renderChips,
   refreshTab, showTab, openStage, topBar, home, LESSONS, WORDS_BOOK: () => W.filter(x => !x.b), missedTable, playQuiz, makeVsQuestions, armed, get tab() { return curTab; } };
