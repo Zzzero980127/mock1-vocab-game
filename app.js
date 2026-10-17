@@ -6,6 +6,11 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.3", date: "2026-10-17", items: [
+    "史詩、傳說成就解鎖時有全螢幕特效：旋轉光芒、獎盃砸下、火花爆開＋專屬音效",
+    "已解鎖的史詩、傳說成就卡片會有流動的光邊",
+    "新增隱藏成就「遊戲設計者」（只有作者本人拿得到），名字會有金色流光和 DEV 徽章",
+  ] },
   { v: "2.2", date: "2026-10-17", items: [
     "新增成就系統：20 個成就，可以先預覽條件和進度；稱號改成解鎖成就才拿得到，不能用金幣買",
     "用 Google 登入會拿到「歡迎加入」成就，並顯示加入日期",
@@ -55,7 +60,10 @@ const AVATARS = [["🙂", 0], ["🐱", 0], ["🐶", 0], ["🐰", 30], ["🐸", 3
   ["🦖", 5, "gem"], ["🪐", 8, "gem"], ["🌈", 8, "gem"], ["🔥", 10, "gem"], ["⚡", 10, "gem"], ["🦋", 12, "gem"], ["💎", 20, "gem"], ["🏆", 25, "gem"]];
 // 成就：p() 回傳 [目前進度, 目標]；解鎖送稱號和寶石
 const knownN = () => Object.keys(S.known || {}).length;
+const DEV_CODE = "4T623X";   // 遊戲作者的好友代碼
+const isMeDev = () => S.code === DEV_CODE;
 const ACH = [
+  { id: "dev", name: "遊戲設計者", desc: "親手打造了這座單字遊樂場", title: "遊戲設計者", gems: 50, tier: 4, hidden: true, icon: "⚡", p: () => [isMeDev() ? 1 : 0, 1] },
   { id: "welcome", name: "歡迎加入", desc: "用 Google 帳號登入", title: "新進玩家", gems: 5, tier: 0, p: () => [S.joined ? 1 : 0, 1] },
   { id: "g10", name: "小試身手", desc: "玩 10 場遊戲", title: "熱身完畢", gems: 2, tier: 0, p: () => [S.games, 10] },
   { id: "g50", name: "遊樂場常客", desc: "玩 50 場遊戲", title: "遊樂場常客", gems: 5, tier: 1, p: () => [S.games, 50] },
@@ -77,7 +85,7 @@ const ACH = [
   { id: "v1", name: "首勝", desc: "好友對戰贏 1 場", title: "初露鋒芒", gems: 3, tier: 0, p: () => [S.wins || 0, 1] },
   { id: "v10", name: "對戰常勝軍", desc: "好友對戰贏 10 場", title: "對戰常勝軍", gems: 15, tier: 2, p: () => [S.wins || 0, 10] },
 ];
-const TIERS = [["普通", "var(--muted)"], ["稀有", "var(--cool)"], ["史詩", "var(--hot)"], ["傳說", "var(--gold)"]];
+const TIERS = [["普通", "var(--muted)"], ["稀有", "var(--cool)"], ["史詩", "var(--hot)"], ["傳說", "var(--gold)"], ["開發者", "#ff3fa4"]];
 const FREE = ["game:match", "game:quiz", "game:spell", "skin:default", "av:🙂", "av:🐱", "av:🐶", "title:單字新手"];
 
 const lvOf = xp => Math.floor(xp / 300) + 1;
@@ -141,6 +149,8 @@ const sfx = {
   win: () => tone([[523, 0, .15], [659, .12, .15], [784, .24, .15], [1047, .36, .4]], "triangle", .16),
   warn: () => tone([[1000, 0, .04]], "square", .05),
   coin: () => tone([[988, 0, .08], [1319, .07, .25]], "square", .07),
+  epic: () => { tone([[392, 0, .14], [523, .12, .14], [659, .24, .14], [784, .36, .14], [1047, .5, .7], [1319, .5, .7], [1568, .62, .8]], "sawtooth", .07);
+    tone([[196, 0, .5], [262, .5, .9]], "triangle", .16); noise(.9, .12); },
   levelup: () => tone([[523, 0, .12], [659, .1, .12], [784, .2, .12], [1047, .3, .12], [784, .42, .1], [1047, .52, .5]], "triangle", .18),
   ding: () => tone([[1175, 0, .15], [1568, .12, .3]], "sine", .2),
 };
@@ -186,9 +196,12 @@ function pool(filter) {
   return filter ? p.filter(filter) : p;
 }
 function applySkin() { if (S.skin === "default") document.documentElement.removeAttribute("data-skin"); else document.documentElement.dataset.skin = S.skin; }
+// 名字／稱號的顯示（作者有專屬特效）
+const nameHtml = (name, dev) => dev ? `<span class="shine dev-glow">${esc(name)}</span><span class="devbadge">DEV</span>` : esc(name);
+const titleHtml = (title, dev) => title === "遊戲設計者" ? (dev ? `<span class="shine">⚡ 遊戲設計者</span>` : "") : esc(title);
 function renderTop() {
   const L = lvOf(S.xp), into = S.xp - (L - 1) * 300;
-  $("#meAv").textContent = S.avatar; $("#meName").textContent = S.name; $("#meTitle").textContent = S.title;
+  $("#meAv").textContent = S.avatar; $("#meName").innerHTML = nameHtml(S.name, isMeDev()); $("#meTitle").innerHTML = titleHtml(S.title, isMeDev()); $("#meBtn").classList.toggle("dev", isMeDev());
   $("#coins").textContent = S.coins; $("#gems").textContent = S.gems; $("#lv").textContent = L; $("#xp").textContent = S.xp;
   $("#xpNext").textContent = `再 ${300 - into} XP 升 Lv ${L + 1}`; $("#xpFill").style.width = into / 3 + "%";
 }
@@ -274,8 +287,25 @@ function checkAch() {
   save(); renderTop(); if (curTab === "ach") renderAch();
   if (achQ.length === n) popAch();
 }
+function bigAch(a, done) {
+  const t = TIERS[a.tier]; sfx.epic();
+  const el = document.createElement("div"); el.className = "fx"; el.style.setProperty("--tc", t[1]);
+  const cols = ["#ffd76b", "#ff8a3d", "#ff3fa4", "#6be3ff", "#b18cff", "#ffffff"];
+  const sparks = Array.from({ length: 40 }, (_, i) => {
+    const ang = i / 40 * Math.PI * 2 + Math.random() * .3, dist = 140 + Math.random() * 260;
+    return `<i class="spark" style="--x:${Math.cos(ang) * dist}px;--y:${Math.sin(ang) * dist}px;--c:${cols[i % cols.length]};animation-delay:${.35 + Math.random() * .2}s"></i>`;
+  }).join("");
+  el.innerHTML = `<div class="rays"></div>${sparks}<div class="core">
+    <div class="tierlbl">${t[0]}成就</div><div class="big-trophy">${a.icon || "🏆"}</div>
+    <h2 class="shine">${esc(a.name)}</h2><p style="margin:0;opacity:.85">${esc(a.desc)}</p>
+    <p style="margin:0">獲得稱號「<b class="shine">${esc(a.title)}</b>」・<b style="color:#c9b3ff">+${a.gems} 寶石</b></p>
+    <button class="btn" type="button">收下</button></div>`;
+  el.querySelector("button").onclick = () => { el.remove(); done(); };
+  document.body.append(el);
+}
 function popAch() {
   const a = achQ[0]; if (!a) return;
+  if (a.tier >= 2) return bigAch(a, () => { achQ.shift(); popAch(); });
   sfx.ding();
   const el = document.createElement("div"); el.className = "achpop";
   el.innerHTML = `<span class="trophy" style="color:${TIERS[a.tier][1]}">🏆</span><span><small>成就解鎖・${TIERS[a.tier][0]}</small><b>${esc(a.name)}</b><small>稱號「${esc(a.title)}」・<span style="color:var(--gem)">+${a.gems} 寶石</span></small></span>`;
@@ -284,16 +314,16 @@ function popAch() {
   setTimeout(() => { el.remove(); achQ.shift(); popAch(); }, 2800);
 }
 function renderAch() {
-  const done = ACH.filter(a => S.ach[a.id]).length;
-  $("#achBox").innerHTML = `<div class="card"><div class="bar"><h2>成就 ${done} / ${ACH.length}</h2><span class="pill gem">寶石 <b>${S.gems}</b></span></div>
+  const list = ACH.filter(a => !a.hidden || S.ach[a.id]), done = list.filter(a => S.ach[a.id]).length;
+  $("#achBox").innerHTML = `<div class="card"><div class="bar"><h2>成就 ${done} / ${list.length}</h2><span class="pill gem">寶石 <b>${S.gems}</b></span></div>
     <p class="muted" style="margin:0">達成條件就自動解鎖，拿到稱號和寶石。寶石可以在商店買稀有頭像和特殊造型。${S.joined ? `你在 <b>${S.joined}</b> 加入遊樂場。` : "用 Google 登入就能拿到「歡迎加入」。"}</p>
-    <div class="xpbar"><i style="width:${done / ACH.length * 100}%"></i></div></div>
-    <div class="achs">${ACH.map(a => {
+    <div class="xpbar"><i style="width:${done / list.length * 100}%"></i></div></div>
+    <div class="achs">${list.map(a => {
       const got = S.ach[a.id], [c, g] = a.p(), t = TIERS[a.tier];
-      return `<div class="ach ${got ? "got" : ""}" style="--tc:${t[1]}">
-        <div class="bar"><span class="trophy">${got ? "🏆" : "🔒"}</span><span class="tier">${t[0]}</span></div>
+      return `<div class="ach ${got ? "got" : ""} ${got && a.tier >= 2 ? "epic" : ""}" style="--tc:${t[1]}">
+        <div class="bar"><span class="trophy">${got ? a.icon || "🏆" : "🔒"}</span><span class="tier">${t[0]}</span></div>
         <b>${esc(a.name)}</b><small>${esc(a.desc)}</small>
-        <div class="plate"><span class="av">${S.avatar}</span><span><b>${esc(S.name)}</b><small>${esc(a.title)}</small></span></div>
+        <div class="plate"><span class="av">${S.avatar}</span><span><b>${nameHtml(S.name, isMeDev())}</b><small>${a.id === "dev" ? titleHtml(a.title, true) : esc(a.title)}</small></span></div>
         <small>獎勵：稱號「${esc(a.title)}」・<span style="color:var(--gem)">${a.gems} 寶石</span></small>
         ${got ? `<small class="ok">${a.id === "welcome" ? "加入日期" : "解鎖於"} ${got}</small>`
           : `<div class="xpbar"><i style="width:${Math.min(1, c / g) * 100}%"></i></div><small>${Math.min(c, g)} / ${g}</small>`}
@@ -337,10 +367,10 @@ $("#shopBox").onclick = e => {
 /* ---------- 個人資料 ---------- */
 const myTitles = () => S.owned.filter(k => k.startsWith("title:")).map(k => k.slice(6));
 function renderMe() {
-  const L = lvOf(S.xp), done = ACH.filter(a => S.ach[a.id]).length;
+  const L = lvOf(S.xp), done = ACH.filter(a => S.ach[a.id]).length, total = ACH.filter(a => !a.hidden || S.ach[a.id]).length;
   $("#meBox").innerHTML = `<div class="card"><div class="row" style="gap:14px"><span class="av lg">${S.avatar}</span>
-      <div style="flex:1;min-width:0"><h2>${esc(S.name)}</h2><span class="muted">${esc(S.title)}・Lv ${L}・XP ${S.xp}・金幣 ${S.coins}・寶石 ${S.gems}</span>
-      <br><span class="muted">${S.joined ? `${S.joined} 加入` : "訪客（尚未登入）"}・成就 ${done}/${ACH.length}</span></div></div>
+      <div style="flex:1;min-width:0"><h2>${nameHtml(S.name, isMeDev())}</h2><span class="muted">${titleHtml(S.title, isMeDev())}・Lv ${L}・XP ${S.xp}・金幣 ${S.coins}・寶石 ${S.gems}</span>
+      <br><span class="muted">${S.joined ? `${S.joined} 加入` : "訪客（尚未登入）"}・成就 ${done}/${total}</span></div></div>
     <label class="muted" for="nameIn">暱稱（最多 12 字，好友和排行榜會看到）</label>
     <div class="type"><input class="field" id="nameIn" maxlength="12" value="${esc(S.name)}"><button class="btn" id="nameSave" type="button">儲存</button></div></div>
     <div class="card"><h2>頭像</h2><div class="chips">${AVATARS.filter(([a]) => owns("av:" + a)).map(([a]) => `<button class="chip" style="font-size:22px" data-use="av:${a}" aria-pressed="${S.avatar === a}">${a}</button>`).join("")}</div>
@@ -456,7 +486,7 @@ function playQuiz(P, vs) {
   const qs = vs ? vs.qs.map(q => W[q.id]) : pick(P, Math.min(15, P.length), ["w"]);
   let i = 0, score = 0, combo = 0, right = 0, raf = 0, locked = false, dead = false; const missed = [];
   openStage(`${topBar("", `<span class="pill">題 <b id="qn">1</b>/${qs.length}</span><span class="pill">分數 <b id="sc">0</b></span>`)}
-    ${vs ? `<div class="vsbar"><div class="side"><span>${esc(S.avatar)} ${esc(S.name)}</span><div class="xpbar"><i id="myProg" style="width:0"></i></div></div>
+    ${vs ? `<div class="vsbar"><div class="side"><span>${esc(S.avatar)} ${nameHtml(S.name, isMeDev())}</span><div class="xpbar"><i id="myProg" style="width:0"></i></div></div>
       <span class="vs">VS</span><div class="side"><span id="oppName">${esc(vs.opp)}</span><div class="xpbar"><i id="oppProg" style="width:0"></i></div><span class="muted" id="oppInfo">第 0 題・0 分</span></div></div>` : ""}
     <div class="timer"><i id="tbar"></i></div><div class="q" id="q"></div><div class="combo" id="cb"></div><div class="opts" id="opts"></div>`);
   stopFn = () => { dead = true; cancelAnimationFrame(raf); document.removeEventListener("keydown", key); vs?.onQuit?.(); };
@@ -683,5 +713,5 @@ function playListen(P) {
 
 $("#total").textContent = W.length;
 applySkin(); renderChips(); hud(); renderLogDot(); setTimeout(checkAch, 800);
-window.APP = { get S() { return S; }, set S(v) { S = v; }, save, checkAch, toast, sfx, modal, esc, lvOf, gain, owns, FREE, renderTop, hud, applySkin, renderChips,
+window.APP = { get S() { return S; }, set S(v) { S = v; }, save, checkAch, nameHtml, titleHtml, DEV_CODE, toast, sfx, modal, esc, lvOf, gain, owns, FREE, renderTop, hud, applySkin, renderChips,
   refreshTab, showTab, openStage, topBar, home, missedTable, playQuiz, makeVsQuestions, armed, get tab() { return curTab; } };

@@ -203,6 +203,28 @@ th{color:var(--muted);font-weight:600;font-size:13px}
 .achpop small{display:block;font-size:12px;color:var(--muted)}
 .achpop b{display:block;font-size:16px}
 @keyframes drop{from{transform:translate(-50%,-30px);opacity:0}}
+/* 史詩／傳說成就特效 */
+@property --a{syntax:"<angle>";initial-value:0deg;inherits:false}
+@keyframes rot{to{--a:360deg}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes slam{0%{transform:scale(3.2) rotate(-25deg);opacity:0}60%{transform:scale(.9) rotate(4deg);opacity:1}100%{transform:scale(1)}}
+@keyframes shine{to{background-position:300% 0}}
+@keyframes burst{0%{transform:translate(-50%,-50%) scale(1.4);opacity:1}100%{transform:translate(calc(-50% + var(--x)),calc(-50% + var(--y))) scale(0);opacity:0}}
+@keyframes rise{from{transform:translateY(24px);opacity:0}}
+@keyframes pulse{50%{box-shadow:0 0 14px #ff3fa4,0 0 4px #ffd76b}}
+.fx{position:fixed;inset:0;z-index:40;display:grid;place-items:center;background:radial-gradient(circle,rgba(20,10,40,.85),rgba(0,0,0,.92));overflow:hidden;padding:16px;color:#fff}
+.fx .rays{position:absolute;left:50%;top:50%;width:170vmax;height:170vmax;margin:-85vmax 0 0 -85vmax;background:repeating-conic-gradient(color-mix(in srgb,var(--tc) 45%,transparent) 0 8deg,transparent 8deg 22deg);animation:spin 14s linear infinite;-webkit-mask-image:radial-gradient(circle,#000 0,transparent 45%);mask-image:radial-gradient(circle,#000 0,transparent 45%)}
+.fx .core{position:relative;text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center;max-width:420px}
+.fx .core>*:not(.big-trophy){animation:rise .5s both;animation-delay:.6s}
+.fx .big-trophy{font-size:110px;line-height:1;filter:drop-shadow(0 0 28px var(--tc)) drop-shadow(0 0 8px #fff);animation:slam .75s cubic-bezier(.2,1.4,.4,1) both}
+.fx .tierlbl{font:400 26px var(--f-display);letter-spacing:6px;color:var(--tc);text-shadow:0 0 20px var(--tc)}
+.fx h2{font-size:32px;margin:0}
+.fx .spark{position:absolute;left:50%;top:50%;width:9px;height:9px;border-radius:50%;background:var(--c);box-shadow:0 0 10px var(--c);opacity:0;animation:burst 1.3s ease-out both}
+.shine{background:linear-gradient(90deg,#ffd76b,#fff7d6,#ff8a3d,#ff3fa4,#b18cff,#6be3ff,#ffd76b);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shine 3.5s linear infinite;font-weight:900}
+.dev-glow{filter:drop-shadow(0 0 6px rgba(255,200,80,.55))}
+.devbadge{display:inline-block;margin-left:6px;font:400 10px/1 var(--f-display);letter-spacing:1px;color:#fff;background:linear-gradient(90deg,#ff3fa4,#ff8a3d);border-radius:5px;padding:3px 5px;vertical-align:middle;animation:pulse 2s ease-in-out infinite}
+.me.dev{border:2px solid transparent;background:linear-gradient(var(--panel),var(--panel)) padding-box,conic-gradient(from var(--a),#ffd76b,#ff3fa4,#6be3ff,#b18cff,#ffd76b) border-box;animation:rot 4s linear infinite}
+.ach.got.epic{border-color:transparent;background:linear-gradient(var(--panel),var(--panel)) padding-box,conic-gradient(from var(--a),var(--tc),transparent 25%,var(--tc) 50%,transparent 75%,var(--tc)) border-box;animation:rot 5s linear infinite;box-shadow:0 0 18px color-mix(in srgb,var(--tc) 30%,transparent)}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;z-index:30;max-width:calc(100% - 32px)}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:grid;place-items:center;z-index:20;padding:16px}
 .modal .box{background:var(--panel);border-radius:18px;padding:24px;max-width:360px;width:100%;text-align:center;display:flex;flex-direction:column;gap:10px;animation:pop .35s}
@@ -261,9 +283,9 @@ th{color:var(--muted);font-weight:600;font-size:13px}
   <section id="tab-log" class="tab" hidden><div class="card"><h2>更新日誌</h2><div id="clList"></div></div></section>
 </div>
 
-<script src="words.js?v=5"></script>
-<script src="firebase-config.js?v=5"></script>
-<script src="app.js?v=5"></script>
-<script type="module" src="online.js?v=5"></script>
+<script src="words.js?v=6"></script>
+<script src="firebase-config.js?v=6"></script>
+<script src="app.js?v=6"></script>
+<script type="module" src="online.js?v=6"></script>
 </body>
 </html>

@@ -9,7 +9,7 @@ const esc = A.esc;
 let F = null, auth = null, db = null, user = null, loadErr = "";
 let pushTimer = 0, beatTimer = 0, unsubs = [], friendUnsubs = [];
 const friends = new Map();          // uid → 公開資料
-let friendIds = [], waiting = null, invites = new Map(), rankCache = {}, rankCat = "xp", rankScope = "all";
+let devUid = "", friendIds = [], waiting = null, invites = new Map(), rankCache = {}, rankCat = "xp", rankScope = "all";
 
 const ON = {
   dirty(force) { if (!user) return; clearTimeout(pushTimer); pushTimer = setTimeout(push, force ? 300 : 2500); },
@@ -65,6 +65,7 @@ async function onLogin() {
     A.toast(`已登入，歡迎 ${S.name}！`);
   } catch (e) { console.error(e); A.toast("讀取雲端存檔失敗：" + (e.code || e.message)); }
   beat(); clearInterval(beatTimer); beatTimer = setInterval(beat, 60000);
+  F.getDoc(F.doc(db, "codes", A.DEV_CODE)).then(c => { devUid = c.exists() ? c.data().uid : ""; A.refreshTab(); }).catch(() => {});
   listenFriends(); listenInvites();
   A.refreshTab();
 }
@@ -286,7 +287,7 @@ function renderVs(box) {
     <div class="card"><div class="bar"><h2>好友（${list.length}）</h2><span class="status on"><i></i>${onlineN} 人在線</span></div>
       <p class="muted" style="margin:0">對戰：同一組 10 題快問，限時作答，看誰分數高。贏 +40 金幣、平手 +20、輸也有 +10。</p>
       <div class="list">${list.length ? list.map(([id, d]) => `<div class="person"><span class="av">${esc(d.avatar || "🙂")}</span>
-        <div class="info"><b>${esc(d.name || "玩家")}</b><small>${esc(d.title || "")}・Lv ${A.lvOf(d.xp || 0)}・</small>${statusHtml(d)}</div>
+        <div class="info"><b>${A.nameHtml(d.name || "玩家", id === devUid)}</b><small>${A.titleHtml(d.title || "", id === devUid)}・Lv ${A.lvOf(d.xp || 0)}・</small>${statusHtml(d)}</div>
         <button class="btn small" data-vs="${id}" type="button" ${waiting ? "disabled" : ""}>挑戰</button>
         <button class="btn small ghost" data-del="${id}" type="button" aria-label="刪除好友">✕</button></div>`).join("")
         : `<p class="muted">還沒有好友，輸入朋友的代碼加一個吧。</p>`}</div></div>`;
@@ -335,7 +336,7 @@ async function renderRank(box) {
   } catch (e) { console.error(e); const l = $("#rkList"); if (l) l.innerHTML = `<p class="muted">讀取排行榜失敗（${esc(e.code || e.message)}）</p>`; return; }
   const l = $("#rkList"); if (!l || rankCat !== cat) return;
   l.innerHTML = rows.length ? rows.map(([id, d], i) => `<div class="person ${id === user.uid ? "me-row" : ""}"><span class="rank r${i + 1}">${i + 1}</span><span class="av">${esc(d.avatar || "🙂")}</span>
-    <div class="info"><b>${esc(d.name || "玩家")}${id === user.uid ? "（我）" : ""}</b><small>${esc(d.title || "")}${d.joined ? `・${d.joined} 加入` : ""}</small></div><span class="score">${fmt(cat, d)}</span></div>`).join("")
+    <div class="info"><b>${A.nameHtml(d.name || "玩家", id === devUid)}${id === user.uid ? "（我）" : ""}</b><small>${A.titleHtml(d.title || "", id === devUid)}${d.joined ? `・${d.joined} 加入` : ""}</small></div><span class="score">${fmt(cat, d)}</span></div>`).join("")
     : `<p class="muted">還沒有人有這項紀錄，快去玩一場搶第一！</p>`;
 }
 
