@@ -235,7 +235,7 @@ const replayBtn = (id = "replay") => `<button class="btn ghost small" id="${id}"
 document.addEventListener("keydown", e => {
   if (!replayFn || e.repeat) return;
   const typing = e.target.matches?.("input, textarea");
-  const hot = typing ? e.key === "1" || e.code === "Numpad1" || (e.altKey && e.code === "KeyR")
+  const hot = typing ? e.code === "Digit1" || e.code === "Numpad1" || e.key === "1" || (e.altKey && e.code === "KeyR")
     : (e.code === "KeyR" && !e.ctrlKey && !e.altKey && !e.metaKey);
   if (hot) { e.preventDefault(); replayFn(); }
 });
