@@ -7,6 +7,9 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.7.4", date: "2026-10-17", items: [
+    "拼字工坊「提示一個字母」現在按下去就直接扣 10 分（分數可以變負的），不能再免費狂按"
+  ]},
   { v: "2.7.3", date: "2026-10-17", items: [
     "房間大廳每間房顯示「目前人數/人數上限」，人數歸零的房間會從大廳消失"
   ]},
@@ -737,7 +740,7 @@ function playSpell(P) {
   }
   function check() {
     if (slots.map(s => s.ch).join("") === ans) {
-      done = true; right++; const pts = Math.max(5, 30 - hints * 10 - tries * 5); score += pts;
+      done = true; right++; const pts = Math.max(5, 30 - tries * 5); score += pts;
       tries ? miss(x) : hit(x); if (tries) missed.push(x);
       $("#sc").textContent = score; $("#sl").classList.add("ok"); sfx.ok();
       $("#msg").className = "msg good"; $("#msg").textContent = `正確 +${pts}`; sayIf(x.w);
@@ -756,7 +759,7 @@ function playSpell(P) {
     const j = slots.findIndex((s, j) => !s || s.ch !== ans[j]); if (j < 0) return;
     if (slots[j]) { letters[slots[j].k].used = false; }
     const k = letters.findIndex(c => !c.used && c.ch === ans[j]);
-    letters[k].used = true; slots[j] = { ch: ans[j], k, hint: true }; hints++; draw();
+    letters[k].used = true; slots[j] = { ch: ans[j], k, hint: true }; hints++; score -= 10; $("#sc").textContent = score; draw();   // 提示當下就倒扣 10 分，分數可以變負的
     if (!slots.includes(null)) check();
   };
   $("#skipB").onclick = () => {
