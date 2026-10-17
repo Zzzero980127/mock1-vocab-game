@@ -7,6 +7,9 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.7.5", date: "2026-10-17", items: [
+    "拼字工坊多了「🔊 聽發音」按鈕（不扣分，可重複聽），每題開始也會自動唸一次（跟著「自動發音」設定）"
+  ]},
   { v: "2.7.4", date: "2026-10-17", items: [
     "拼字工坊「提示一個字母」現在按下去就直接扣 10 分（分數可以變負的），不能再免費狂按"
   ]},
@@ -700,7 +703,7 @@ function playSpell(P) {
   openStage(`${topBar("", `<span class="pill">題 <b id="qn">1</b>/${qs.length}</span><span class="pill">分數 <b id="sc">0</b></span>`)}
     <div class="q" id="q"></div><div class="slots" id="sl"></div><div class="letters" id="lt"></div>
     <div class="msg" id="msg"></div>
-    <div class="bar" style="justify-content:center"><button class="btn ghost" id="hintB" type="button">提示一個字母（−10）</button><button class="btn ghost" id="skipB" type="button">看答案</button></div>`);
+    <div class="bar" style="justify-content:center"><button class="btn ghost" id="sayB" type="button">🔊 聽發音</button><button class="btn ghost" id="hintB" type="button">提示一個字母（−10）</button><button class="btn ghost" id="skipB" type="button">看答案</button></div>`);
   let x, ans, letters, slots, hints, tries, done, dead = false;
   function key(e) {
     if (done) return;
@@ -721,7 +724,7 @@ function playSpell(P) {
     $("#qn").textContent = i + 1;
     $("#q").innerHTML = `${esc(x.c)}<small>${esc(pos(x))}・${ans.length} 個字母</small>`;
     $("#msg").className = "msg"; $("#msg").textContent = "";
-    draw();
+    draw(); sayIf(x.w);
   }
   function draw() {
     $("#sl").className = "slots";
@@ -752,6 +755,7 @@ function playSpell(P) {
   }
   $("#lt").onclick = e => { const b = e.target.closest(".let"); if (b && !done) put(+b.dataset.k); };
   $("#sl").onclick = e => { const b = e.target.closest(".slot"); if (b && !done) undo(+b.dataset.j); };
+  $("#sayB").onclick = () => { if (!done) speak(x.w); };
   $("#hintB").onclick = () => {
     if (done) return;
     // 把錯位的字母全部收回，填入下一個正確字母
