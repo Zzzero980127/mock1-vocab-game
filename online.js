@@ -155,7 +155,7 @@ async function addFriend(code) {
   try {
     const c = await F.getDoc(F.doc(db, "codes", code));
     if (!c.exists()) return A.toast("找不到這個代碼");
-    await befriend(c.data().uid);
+    await sendRequest(c.data().uid);
   } catch (e) { console.error(e); A.toast("加好友失敗：" + (e.code || e.message)); }
 }
 async function befriend(fid) {
@@ -540,7 +540,7 @@ function renderVs(box) {
         <button class="btn small" data-join="${esc(r.id)}" type="button">加入</button></div>`).join("")
         : `<p class="muted">目前沒有公開的房間，自己開一間吧。</p>`}</div></div>
     <div class="card"><div class="bar"><h2>我的好友代碼</h2><span class="code">${esc(me.code || "…")}</span></div>
-      <p class="muted" style="margin:0">把代碼給朋友，或輸入朋友的代碼加好友。在房間裡遇到沒加過的人，可以按「加好友」送出申請，對方同意才會成為好友。</p>
+      <p class="muted" style="margin:0">把代碼給朋友，或輸入朋友的代碼送出好友申請。在房間裡遇到沒加過的人，也可以按「加好友」，對方同意才會成為好友。</p>
       <div class="type"><input class="field" id="fcode" maxlength="6" placeholder="輸入朋友的 6 位代碼" autocapitalize="characters" autocomplete="off"><button class="btn" data-add type="button">加好友</button></div>
       <div class="row"><button class="btn small ghost" data-copy type="button">複製我的代碼</button></div></div>
     ${reqs.size ? `<div class="card" style="border-color:var(--hot)"><h2>好友申請（${reqs.size}）</h2><div class="list">${[...reqs.entries()].map(([id, v]) => `<div class="person"><span class="av">${esc(v.fromAv || "🙂")}</span>
