@@ -7,6 +7,9 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.7.11", date: "2026-10-17", items: [
+    "極光造型加上星軌：整片星空繞著天極緩慢旋轉，每顆星拖著弧形光尾；極光價格調為 50 寶石（已購買的不受影響）"
+  ]},
   { v: "2.7.10", date: "2026-10-17", items: [
     "極光造型重做：改用即時繪製的波浪光幕，綠、青、紫的簾幕會像真的極光一樣起伏流動，不再是燈管"
   ]},
@@ -121,7 +124,7 @@ const SKINS = [
   { k: "gold", name: "黑金", desc: "尊爵不凡", price: 300, sw: ["#121110", "#e8b64c", "#7fc8a9"] },
   { k: "galaxy", name: "星空", desc: "滿天星斗", price: 15, cur: "gem", sw: ["#0d0b24", "#b18cff", "#ffd36b"] },
   { k: "lava", name: "熔岩", desc: "火山爆發", price: 15, cur: "gem", sw: ["#1a0b07", "#ff5a1f", "#ffc23d"] },
-  { k: "aurora", name: "極光", desc: "會流動的極光", price: 25, cur: "gem", sw: ["#06141f", "#3df5b0", "#8a7dff"] },
+  { k: "aurora", name: "極光", desc: "星軌下的流動極光", price: 50, cur: "gem", sw: ["#06141f", "#3df5b0", "#8a7dff"] },
 ];
 const AVATARS = [["🙂", 0], ["🐱", 0], ["🐶", 0], ["🐰", 30], ["🐸", 30], ["🐧", 40], ["🦊", 50], ["🐼", 50], ["🐯", 60], ["🦉", 60], ["🐙", 80], ["🦄", 120], ["🐲", 150], ["🚀", 150], ["👑", 10000],
   ["🦖", 5, "gem"], ["🪐", 8, "gem"], ["🌈", 8, "gem"], ["🔥", 10, "gem"], ["⚡", 10, "gem"], ["🦋", 12, "gem"], ["💎", 20, "gem"], ["🏆", 25, "gem"]];
@@ -310,13 +313,28 @@ function auroraCanvas(on) {
     mk([[0, "rgba(255,120,220,0)"], [.5, "rgba(170,110,255,.2)"], [.85, "rgba(60,225,255,.7)"], [.97, "rgba(190,250,255,.95)"], [1, "rgba(60,225,255,0)"]]),
     mk([[0, "rgba(90,255,170,0)"], [.6, "rgba(90,255,170,.3)"], [.93, "rgba(210,255,170,.8)"], [1, "rgba(210,255,170,0)"]]),
   ];
+  let stars = [];
+  const initStars = () => { const W = cv.width, H = cv.height, D = Math.hypot(W, H); stars = Array.from({ length: 260 }, () => ({ r: D * (.08 + Math.random() * .95), a: Math.random() * 6.283, l: .12 + Math.random() * .3, b: .35 + Math.random() * .65, w: Math.random() * 6 })); };
   const still = matchMedia("(prefers-reduced-motion:reduce)").matches;
-  const size = () => { cv.width = Math.ceil(innerWidth / 3); cv.height = Math.ceil(innerHeight / 3); };
+  const size = () => { cv.width = Math.ceil(innerWidth / 2); cv.height = Math.ceil(innerHeight / 2); initStars(); };
   size(); addEventListener("resize", size);
   const draw = ms => {
     if (document.documentElement.dataset.skin !== "aurora") { auroraCanvas(false); return; }
     const t = ms / 1000 * 1.6, W = cv.width, H = cv.height;
-    ctx.clearRect(0, 0, W, H); ctx.globalCompositeOperation = "lighter";
+    ctx.clearRect(0, 0, W, H);
+    const px = W * .58, py = H * 1.05, rot = ms / 1000 * .035;   // 星軌：繞著天極緩慢旋轉的弧線
+    ctx.lineCap = "round"; ctx.lineWidth = Math.max(1, W / 900);
+    stars.forEach(s => {
+      const a1 = s.a + rot, tw = .75 + .25 * Math.sin(ms / 700 + s.w), N = 5;
+      for (let i = 0; i < N; i++) {
+        const u0 = a1 - s.l * (1 - i / N), u1 = a1 - s.l * (1 - (i + 1) / N);
+        const x0 = px + s.r * Math.cos(u0), y0 = py + s.r * Math.sin(u0), x1 = px + s.r * Math.cos(u1), y1 = py + s.r * Math.sin(u1);
+        if (y0 > H * .8 && y1 > H * .8) continue;
+        ctx.strokeStyle = `rgba(215,230,255,${(s.b * tw * (i + 1) / N * .8).toFixed(3)})`;
+        ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+      }
+    });
+    ctx.globalCompositeOperation = "lighter";
     strips.forEach((st, k) => {
       const base = [.42, .55, .32][k], ph = k * 2.1;
       for (let x = 0; x < W; x++) {
