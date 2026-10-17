@@ -7,6 +7,13 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.5", date: "2026-10-17", items: [
+    "出題改成「沒考過的字先出現」，要先把整個字庫考過一輪才會重複，不能靠刷同一批字",
+    "「快問之王」變難：要選課本全部課次，快問連擊拿到 4500 分；新增「大考快問王」（大考 4000 全選）",
+    "新增熟練度成就：一模滿分腦（336 字）、四千單通關、六千單宗師。要把整個字庫每個字都考過，且「第一次作答」正確率 90% 以上才拿得到",
+    "成就卡片會顯示已測字數與首答正確率",
+    "高階成就（閃電配對、聽力王、隕石、拼字、快問）都要在字庫全選的範圍拿到成績才算，只開一課不行；新增隕石毀滅者、拼字大師、大考順風耳、大考拼字王",
+  ] },
   { v: "2.4", date: "2026-10-17", items: [
     "新增「字庫」切換：課本 336 字／Lv1～3（約 3000 字，對應全樺模考第一、二次）／Lv1～4（約 4000 字，對應第三～五次）／Lv1～6（約 6000 字）",
     "字庫來源是大考中心《高中英文參考詞彙表》（111 學年起適用），可以用 Lv1～Lv6 按鈕只練某幾級",
@@ -68,6 +75,16 @@ const AVATARS = [["🙂", 0], ["🐱", 0], ["🐶", 0], ["🐰", 30], ["🐸", 3
 const knownN = () => Object.keys(S.known || {}).length;
 const DEV_CODE = "4T623X";   // 遊戲作者的好友代碼
 const isMeDev = () => S.code === DEV_CODE;
+// 熟練度：一個字庫「每個字都考過」且「第一次作答」正確率達標，才算讀熟（重複刷同一批字沒用）
+const idsOf = k => { const r = k === "book" ? W.filter(x => !x.b) : W.filter(x => x.b && x.lv <= (k === "c4000" ? 4 : 6)); return r.map(x => x.id); };
+const _ids = {};
+function mastery(k) {
+  const ids = _ids[k] = _ids[k] || idsOf(k); let seen = 0, ok = 0;
+  for (const i of ids) if (S.first[i] !== undefined) { seen++; ok += S.first[i]; }
+  return { total: ids.length, seen, acc: seen ? ok / seen : 0 };
+}
+const masteryP = (k, th) => () => { const m = mastery(k); return [m.seen >= m.total && m.acc >= th ? m.total : Math.min(m.seen, m.total - 1), m.total]; };
+const masteryNote = k => () => { const m = mastery(k); return `已測 ${m.seen}/${m.total} 字・首答正確率 ${(m.acc * 100).toFixed(1)}%`; };
 const ACH = [
   { id: "dev", name: "遊戲設計者", desc: "親手打造了這座單字遊樂場", title: "遊戲設計者", gems: 50, tier: 4, hidden: true, icon: "⚡", p: () => [isMeDev() ? 1 : 0, 1] },
   { id: "welcome", name: "歡迎加入", desc: "用 Google 帳號登入", title: "新進玩家", gems: 5, tier: 0, p: () => [S.joined ? 1 : 0, 1] },
@@ -80,12 +97,20 @@ const ACH = [
   { id: "w100", name: "百字斬", desc: "答對過 100 個不同的單字", title: "百字斬", gems: 5, tier: 1, p: () => [knownN(), 100] },
   { id: "wall", name: "單字之神", desc: "336 個課本單字全部答對過", title: "單字之神", gems: 30, tier: 3, p: () => [Object.keys(S.known || {}).filter(i => i < BOOKN).length, BOOKN] },
   { id: "m15", name: "配對快手", desc: "配對消除 15 秒內完成", title: "配對快手", gems: 5, tier: 1, p: () => [S.best.match && S.best.match <= 15 ? 1 : 0, 1] },
-  { id: "m10", name: "閃電配對", desc: "配對消除 10 秒內完成", title: "閃電手", gems: 10, tier: 2, p: () => [S.best.match && S.best.match <= 10 ? 1 : 0, 1] },
+  { id: "m10", name: "閃電配對", desc: "字庫選課本 336 字全部課次，配對消除 8 秒內完成", title: "閃電手", gems: 10, tier: 2, p: () => [fb("match") && fb("match") <= 8 ? 1 : 0, 1] },
   { id: "q2500", name: "連擊大師", desc: "快問連擊拿到 2500 分", title: "連擊大師", gems: 5, tier: 1, p: () => [S.best.quiz || 0, 2500] },
-  { id: "q4500", name: "快問之王", desc: "快問連擊拿到 4500 分", title: "快問之王", gems: 12, tier: 2, p: () => [S.best.quiz || 0, 4500] },
+  { id: "q4500", name: "快問之王", desc: "字庫選課本 336 字、全部課次全選，快問連擊拿到 4500 分", title: "快問之王", gems: 12, tier: 2, p: () => [fb("quiz") || 0, 4500] },
+  { id: "q4000", name: "大考快問王", desc: "字庫選大考 4000（Lv1～4 全選），快問連擊拿到 4500 分", title: "大考快問王", gems: 20, tier: 3, p: () => [fb("quiz", "c4000") || 0, 4500] },
+  { id: "mbook", name: "一模滿分腦", desc: "336 個課本單字全部考過，第一次作答正確率 90% 以上", title: "一模熟讀者", gems: 25, tier: 3, p: masteryP("book", .9), note: masteryNote("book") },
+  { id: "m4000", name: "四千單通關", desc: "大考 4000 字（Lv1～4）全部考過，第一次作答正確率 90% 以上", title: "四千單達人", gems: 60, tier: 3, p: masteryP("c4000", .9), note: masteryNote("c4000") },
+  { id: "m6000", name: "六千單宗師", desc: "大考 6000 字（Lv1～6）全部考過，第一次作答正確率 90% 以上", title: "六千單宗師", gems: 120, tier: 3, p: masteryP("c6000", .9), note: masteryNote("c6000") },
   { id: "r300", name: "隕石獵人", desc: "單字隕石拿到 300 分", title: "隕石獵人", gems: 6, tier: 1, p: () => [S.best.rock || 0, 300] },
   { id: "s250", name: "拼字工匠", desc: "拼字工坊拿到 250 分", title: "拼字工匠", gems: 6, tier: 1, p: () => [S.best.spell || 0, 250] },
-  { id: "l250", name: "順風耳", desc: "聽音拼字 10 題全部一次聽對（250 分）", title: "聽力王", gems: 10, tier: 2, p: () => [S.best.listen || 0, 250] },
+  { id: "l250", name: "順風耳", desc: "字庫選課本 336 字全部課次，聽音拼字 10 題全部一次聽對（250 分）", title: "聽力王", gems: 10, tier: 2, p: () => [fb("listen") || 0, 250] },
+  { id: "r600", name: "隕石毀滅者", desc: "字庫選課本 336 字全部課次，單字隕石拿到 600 分", title: "隕石毀滅者", gems: 12, tier: 2, p: () => [fb("rock") || 0, 600] },
+  { id: "s250f", name: "拼字大師", desc: "字庫選課本 336 字全部課次，拼字工坊拿到滿分 250", title: "拼字大師", gems: 12, tier: 2, p: () => [fb("spell") || 0, 250] },
+  { id: "l4000", name: "大考順風耳", desc: "字庫選大考 4000（Lv1～4 全選），聽音拼字 10 題全部一次聽對", title: "大考順風耳", gems: 25, tier: 3, p: () => [fb("listen", "c4000") || 0, 250] },
+  { id: "s4000", name: "大考拼字王", desc: "字庫選大考 4000（Lv1～4 全選），拼字工坊拿到滿分 250", title: "大考拼字王", gems: 25, tier: 3, p: () => [fb("spell", "c4000") || 0, 250] },
   { id: "f1", name: "交個朋友", desc: "加 1 位好友", title: "好夥伴", gems: 3, tier: 0, p: () => [S.friendsN || 0, 1] },
   { id: "f5", name: "人氣王", desc: "加 5 位好友", title: "人氣王", gems: 8, tier: 1, p: () => [S.friendsN || 0, 5] },
   { id: "v1", name: "首勝", desc: "好友對戰贏 1 場", title: "初露鋒芒", gems: 3, tier: 0, p: () => [S.wins || 0, 1] },
@@ -96,8 +121,9 @@ const FREE = ["game:match", "game:quiz", "game:spell", "skin:default", "av:🙂"
 
 const lvOf = xp => Math.floor(xp / 300) + 1;
 let S = { xp: 0, wrong: {}, best: {}, lessons: LESSONS.slice(), bank: "book", lvs: [1, 2, 3, 4, 5, 6], wrongOnly: false, autoSay: true, sfx: true,
-  owned: FREE.slice(), skin: "default", name: "", avatar: "🙂", title: "單字新手", games: 0, wins: 0, losses: 0, seenVer: "", gems: 0, ach: {}, known: {}, joined: "" };
+  owned: FREE.slice(), skin: "default", name: "", avatar: "🙂", title: "單字新手", games: 0, wins: 0, losses: 0, seenVer: "", gems: 0, ach: {}, known: {}, first: {}, joined: "" };
 try { Object.assign(S, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (e) {}
+if (!S.first) S.first = {};   // 每個字「第一次作答」對或錯（1/0），算熟練度正確率用，之後重複作答不影響
 if (S.coins === undefined) S.coins = 100 + (lvOf(S.xp) - 1) * 60;   // 舊玩家補發已升過的等級
 S.owned = [...new Set([...FREE, ...(S.owned || [])])];
 if (!S.name) S.name = "玩家" + (1000 + Math.random() * 9000 | 0);
@@ -109,9 +135,11 @@ const norm = s => s.toLowerCase().replace(/[….]+/g, " ").replace(/\s+/g, " ").
 const typable = x => /^[a-z' -]+$/i.test(x.w);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const pos = x => x.p ? x.p : "片語";
-function pick(list, n, keys) {           // 取 n 個，keys 欄位不重複（避免 fair 名詞/形容詞同時出現）
+const seenW = x => S.first[x.id] !== undefined || S.known[x.id] || S.wrong[x.id];   // 這個字以前考過嗎
+function pick(list, n, keys, fresh) {    // 取 n 個，keys 欄位不重複（避免 fair 名詞/形容詞同時出現）；fresh=沒考過的字優先，不能靠重複刷同一批字
   const out = [], seen = keys.map(() => new Set());
-  for (const x of shuffle(list)) {
+  let L = shuffle(list); if (fresh) L = [...L.filter(x => !seenW(x)), ...L.filter(seenW)];
+  for (const x of L) {
     if (keys.some((k, i) => seen[i].has(x[k]))) continue;
     keys.forEach((k, i) => seen[i].add(x[k])); out.push(x);
     if (out.length === n) break;
@@ -193,12 +221,19 @@ function gain(xp, extraCoins = 0) {
   }, 600);
   return got;
 }
-function miss(x) { S.wrong[x.id] = (S.wrong[x.id] || 0) + 1; save(); hud(); }
-function hit(x) { S.known[x.id] = 1; if (S.wrong[x.id]) { if (--S.wrong[x.id] <= 0) delete S.wrong[x.id]; save(); hud(); } }
+function miss(x) { if (S.first[x.id] === undefined) S.first[x.id] = 0; S.wrong[x.id] = (S.wrong[x.id] || 0) + 1; save(); hud(); }
+function hit(x) { if (S.first[x.id] === undefined) S.first[x.id] = 1; S.known[x.id] = 1; if (S.wrong[x.id]) { if (--S.wrong[x.id] <= 0) delete S.wrong[x.id]; save(); hud(); } }
 
 const bankMax = () => ({ c3000: 3, c4000: 4, c6000: 6 })[S.bank] || 0;
 const uni = () => S.bank === "book" ? W.filter(x => !x.b) : W.filter(x => x.b && x.lv <= bankMax());   // 目前字庫全部單字（出干擾選項用）
 const lvSel = () => { const m = S.lvs.filter(v => v <= bankMax()); return m.length ? m : [1, 2, 3, 4, 5, 6]; };   // 切字庫後選的級別超出範圍就當全選
+const fullScope = () => !S.wrongOnly && (S.bank === "book" ? LESSONS.every(l => S.lessons.includes(l)) : lvSel().length >= bankMax());
+const bankKey = () => S.bank === "book" ? "book" : "c" + (bankMax() * 1000 || 6000);   // 與字庫對應的紀錄鍵
+function recFull(m, v) {   // 字庫全選時另外記一份「全範圍紀錄」，高階成就看這個
+  if (!fullScope()) return; const k = `f_${m}_${bankKey()}`, o = S.best[k];
+  if (o == null || (m === "match" ? v < o : v > o)) S.best[k] = v;
+}
+const fb = (m, k = "book") => S.best[`f_${m}_${k}`];
 const BANKS = [["book", "課本 336"], ["c3000", "模考前兩次 3000"], ["c4000", "模考後三次 4000"], ["c6000", "大考 6000"]];
 function pool(filter) {
   let p = S.bank === "book" ? W.filter(x => !x.b && S.lessons.includes(x.l)) : uni().filter(x => lvSel().includes(x.lv));
@@ -351,7 +386,7 @@ function renderAch() {
         <div class="plate"><span class="av">${S.avatar}</span><span><b>${nameHtml(S.name, isMeDev())}</b><small>${a.id === "dev" ? titleHtml(a.title, true) : esc(a.title)}</small></span></div>
         <small>獎勵：稱號「${esc(a.title)}」・<span style="color:var(--gem)">${a.gems} 寶石</span></small>
         ${got ? `<small class="ok">${a.id === "welcome" ? "加入日期" : "解鎖於"} ${got}</small>`
-          : `<div class="xpbar"><i style="width:${Math.min(1, c / g) * 100}%"></i></div><small>${Math.min(c, g)} / ${g}</small>`}
+          : `<div class="xpbar"><i style="width:${Math.min(1, c / g) * 100}%"></i></div><small>${Math.min(c, g)} / ${g}</small>${a.note ? `<small>${a.note()}</small>` : ""}`}
       </div>`; }).join("")}</div>`;
 }
 
@@ -475,7 +510,7 @@ function makeVsQuestions(n = 10) {
 
 /* ---------- 配對消除 ---------- */
 function playMatch(P) {
-  const set = pick(P, 6, ["w", "c"]);
+  const set = pick(P, 6, ["w", "c"], true);
   const tiles = shuffle(set.flatMap(x => [{ x, t: "en", s: x.w }, { x, t: "zh", s: x.c }]));
   openStage(`${topBar("", `<span class="pill">時間 <b id="tm">0.0</b></span><span class="pill">罰秒 <b id="pen">0</b></span>`)}
     <p class="center" style="margin:0">點一個英文、再點它的中文（順序不拘）</p>
@@ -495,7 +530,7 @@ function playMatch(P) {
       sel = null;
       if (--left === 0) {
         const t = (performance.now() - t0) / 1000 + pen;
-        const best = !S.best.match || t < S.best.match; if (best) S.best.match = t;
+        const best = !S.best.match || t < S.best.match; if (best) S.best.match = t; recFull("match", t);
         result("match", t.toFixed(1) + "s", best ? "新紀錄！" : `最佳紀錄 ${S.best.match.toFixed(1)} 秒`, missed, 20 + Math.max(0, Math.round(40 - t)));
       }
     } else {
@@ -509,7 +544,7 @@ function playMatch(P) {
 
 /* ---------- 快問連擊（好友對戰也用這個，vs 帶入固定題目與回呼） ---------- */
 function playQuiz(P, vs) {
-  const qs = vs ? vs.qs.map(q => W[q.id]) : pick(P, Math.min(15, P.length), ["w"]);
+  const qs = vs ? vs.qs.map(q => W[q.id]) : pick(P, Math.min(15, P.length), ["w"], true);
   let i = 0, score = 0, combo = 0, right = 0, raf = 0, locked = false, dead = false; const missed = [];
   openStage(`${topBar("", `<span class="pill">題 <b id="qn">1</b>/${qs.length}</span><span class="pill">分數 <b id="sc">0</b></span>`)}
     ${vs ? `<div class="vsbar"><div class="side"><span>${esc(S.avatar)} ${nameHtml(S.name, isMeDev())}</span><div class="xpbar"><i id="myProg" style="width:0"></i></div></div>
@@ -524,6 +559,7 @@ function playQuiz(P, vs) {
     if (i >= qs.length) {
       if (vs) { dead = true; cancelAnimationFrame(raf); document.removeEventListener("keydown", key); stopFn = null; return vs.onEnd(score, right, missed); }
       const best = !S.best.quiz || score > S.best.quiz; if (best) S.best.quiz = score;
+      recFull("quiz", score);
       return result("quiz", score, `答對 ${right}/${qs.length}${best ? "・新紀錄！" : ""}`, missed, right * 4);
     }
     const x = qs[i], enQ = vs ? vs.qs[i].enQ : Math.random() < .5; locked = false;
@@ -572,7 +608,8 @@ function playRock(P) {
   stopFn = () => cancelAnimationFrame(raf);
   const accept = x => new Set(W.filter(y => y.c === x.c && typable(y)).map(y => norm(y.w)));
   function spawn() {
-    let x; do { x = P[Math.random() * P.length | 0]; } while (P.length > 1 && x === last);
+    let x; const nw = P.filter(y => !seenW(y) && y !== last), src = nw.length ? nw : P;
+    do { x = src[Math.random() * src.length | 0]; } while (src.length > 1 && x === last);
     last = x; cur = { x, el: document.createElement("div") };
     cur.el.className = "rock"; cur.el.innerHTML = `${esc(x.c)}<small>${esc(pos(x))}・${x.l}</small>`;
     ar.append(cur.el); t0 = performance.now(); raf = requestAnimationFrame(fall);
@@ -592,7 +629,7 @@ function playRock(P) {
     inp.value = ""; inp.focus();
   }
   function end() {
-    const best = !S.best.rock || score > S.best.rock; if (best) S.best.rock = score;
+    const best = !S.best.rock || score > S.best.rock; if (best) S.best.rock = score; recFull("rock", score);
     result("rock", score, `擊碎 ${n} 顆隕石${best ? "・新紀錄！" : ""}`, missed, n * 3);
   }
   $("#fm").onsubmit = e => {
@@ -616,7 +653,7 @@ function playRock(P) {
 
 /* ---------- 拼字工坊 ---------- */
 function playSpell(P) {
-  const qs = pick(P, Math.min(10, P.length), ["w"]);
+  const qs = pick(P, Math.min(10, P.length), ["w"], true);
   let i = 0, score = 0, right = 0; const missed = [];
   openStage(`${topBar("", `<span class="pill">題 <b id="qn">1</b>/${qs.length}</span><span class="pill">分數 <b id="sc">0</b></span>`)}
     <div class="q" id="q"></div><div class="slots" id="sl"></div><div class="letters" id="lt"></div>
@@ -633,7 +670,7 @@ function playSpell(P) {
   function next() {
     if (dead) return;
     if (i >= qs.length) {
-      const best = !S.best.spell || score > S.best.spell; if (best) S.best.spell = score;
+      const best = !S.best.spell || score > S.best.spell; if (best) S.best.spell = score; recFull("spell", score);
       return result("spell", score, `拼對 ${right}/${qs.length}${best ? "・新紀錄！" : ""}`, missed, right * 4);
     }
     x = qs[i]; ans = x.w.toLowerCase(); hints = 0; tries = 0; done = false;
@@ -693,7 +730,7 @@ function playSpell(P) {
 
 /* ---------- 聽音拼字 ---------- */
 function playListen(P) {
-  const qs = pick(P, Math.min(10, P.length), ["w"]);
+  const qs = pick(P, Math.min(10, P.length), ["w"], true);
   let i = 0, score = 0, right = 0, x, tries, done, dead = false; const missed = [];
   stopFn = () => { dead = true; };
   openStage(`${topBar("", `<span class="pill">題 <b id="qn">1</b>/${qs.length}</span><span class="pill">分數 <b id="sc">0</b></span>`)}
@@ -710,7 +747,7 @@ function playListen(P) {
   function next() {
     if (dead) return;
     if (i >= qs.length) {
-      const best = !S.best.listen || score > S.best.listen; if (best) S.best.listen = score;
+      const best = !S.best.listen || score > S.best.listen; if (best) S.best.listen = score; recFull("listen", score);
       return result("listen", score, `聽對 ${right}/${qs.length}${best ? "・新紀錄！" : ""}`, missed, right * 4);
     }
     x = qs[i]; tries = 0; done = false;

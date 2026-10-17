@@ -42,7 +42,7 @@ async function login() {
 const PROGRESS = ["xp", "coins", "gems", "best", "owned", "wrong", "games", "wins", "losses", "name", "avatar", "title", "skin", "lessons"];
 function mergeBest(a = {}, b = {}) {
   const o = { ...a };
-  for (const [k, v] of Object.entries(b)) o[k] = o[k] == null ? v : k === "match" ? Math.min(o[k], v) : Math.max(o[k], v);
+  for (const [k, v] of Object.entries(b)) o[k] = o[k] == null ? v : (k === "match" || k.startsWith("f_match")) ? Math.min(o[k], v) : Math.max(o[k], v);
   return o;
 }
 async function onLogin() {
@@ -54,7 +54,7 @@ async function onLogin() {
       const best = mergeBest(S.best, c.best), owned = [...new Set([...A.FREE, ...(S.owned || []), ...(c.owned || [])])];
       if ((c.xp || 0) >= S.xp) PROGRESS.forEach(k => { if (c[k] !== undefined) S[k] = c[k]; });
       S.best = best; S.owned = owned; S.code = c.code;
-      S.ach = { ...(S.ach || {}), ...(c.ach || {}) }; S.known = { ...(S.known || {}), ...(c.known || {}) };
+      S.ach = { ...(S.ach || {}), ...(c.ach || {}) }; S.known = { ...(S.known || {}), ...(c.known || {}) }; S.first = { ...(c.first || {}), ...(S.first || {}) };
       if (c.joined) S.joined = c.joined;
     }
     if (!S.joined) S.joined = new Date().toLocaleDateString("sv");
@@ -87,7 +87,7 @@ function pub() {
   for (const [k, v] of Object.entries(S.best || {})) if (typeof v === "number") best[k] = v;
   return { name: S.name, avatar: S.avatar, title: S.title, skin: S.skin, xp: S.xp, level: A.lvOf(S.xp), coins: S.coins, best,
     owned: S.owned, wrong: S.wrong, lessons: S.lessons, games: S.games || 0, wins: S.wins || 0, losses: S.losses || 0,
-    gems: S.gems || 0, ach: S.ach || {}, achN: Object.keys(S.ach || {}).length, known: S.known || {}, joined: S.joined || "",
+    gems: S.gems || 0, ach: S.ach || {}, achN: Object.keys(S.ach || {}).length, known: S.known || {}, first: S.first || {}, joined: S.joined || "",
     code: S.code || "", lastSeen: F.serverTimestamp(), updatedAt: F.serverTimestamp() };
 }
 async function push() {
