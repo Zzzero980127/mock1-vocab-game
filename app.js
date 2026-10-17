@@ -7,6 +7,9 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.6.1", date: "2026-10-17", items: [
+    "單字隕石：同一局不再重複出現相同單字（全部出過一輪才重新洗牌）"
+  ]},
   { v: "2.6", date: "2026-10-17", items: [
     "右上角新增登入按鈕，可選「Google 登入」或「遊客登入」；遊客不用綁定任何帳號，一樣能加好友、對戰、上排行榜",
     "遊客可以在個人資料隨時「綁定 Google」把進度保存下來",
@@ -606,7 +609,7 @@ function playQuiz(P, vs) {
 
 /* ---------- 單字隕石 ---------- */
 function playRock(P) {
-  let score = 0, lives = 3, combo = 0, n = 0, dur = 13000, raf = 0, cur = null, t0 = 0, copying = false, last = null; const missed = [];
+  let score = 0, lives = 3, combo = 0, n = 0, dur = 13000, raf = 0, cur = null, t0 = 0, copying = false, last = null; const missed = [], used = new Set();
   openStage(`${topBar("", `<span class="pill">生命 <b id="lf">♥♥♥</b></span><span class="pill">分數 <b id="sc">0</b></span><span class="pill">速度 <b id="spd">1</b></span>`)}
     <div class="arena" id="ar"><div class="ground"></div></div>
     <div class="msg" id="msg">打出英文後按 Enter</div>
@@ -615,9 +618,10 @@ function playRock(P) {
   stopFn = () => cancelAnimationFrame(raf);
   const accept = x => new Set(W.filter(y => y.c === x.c && typable(y)).map(y => norm(y.w)));
   function spawn() {
-    let x; const nw = P.filter(y => !seenW(y) && y !== last), src = nw.length ? nw : P;
-    do { x = src[Math.random() * src.length | 0]; } while (src.length > 1 && x === last);
-    last = x; cur = { x, el: document.createElement("div") };
+    let x; if (P.every(y => used.has(y))) used.clear();   // 本局不重複：全部出過才重新洗牌
+    const left = P.filter(y => !used.has(y) && y !== last), nw = left.filter(y => !seenW(y)), src = nw.length ? nw : left.length ? left : P;
+    x = src[Math.random() * src.length | 0];
+    used.add(x); last = x; cur = { x, el: document.createElement("div") };
     cur.el.className = "rock"; cur.el.innerHTML = `${esc(x.c)}<small>${esc(pos(x))}・${x.l}</small>`;
     ar.append(cur.el); t0 = performance.now(); raf = requestAnimationFrame(fall);
   }
