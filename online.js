@@ -298,7 +298,7 @@ function renderAccount(box) {
     <div class="row">好友代碼 <span class="code">${esc(A.S.code || "…")}</span></div>
     <div class="row">${g ? `<button class="btn small" data-link type="button">綁定 Google 保存進度</button>` : ""}<button class="btn ghost small" data-logout type="button">登出</button></div>`;
   box.querySelector("[data-link]")?.addEventListener("click", linkGoogle);
-  box.querySelector("[data-logout]").onclick = e => A.armed(e.target, g ? "遊客登出後帳號會消失，確定？" : "再按一次確定登出", () => F.signOut(auth));
+  box.querySelector("[data-logout]").onclick = e => A.armed(e.target, g ? "遊客登出後帳號會消失，確定？" : "再按一次確定登出", async () => { await F.signOut(auth); try { localStorage.removeItem("mock1-vocab-game"); } catch (e) {} location.reload(); });   // 本機存檔一併清掉，免得下一個帳號（尤其新遊客）繼承成就和名字
 }
 function renderVs(box) {
   if (!gate(box)) return;

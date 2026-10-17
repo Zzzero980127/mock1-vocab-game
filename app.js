@@ -7,6 +7,9 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.6.2", date: "2026-10-17", items: [
+    "修正：登出後本機存檔會被清空，新建的遊客不會再繼承上一個帳號的成就和名字"
+  ]},
   { v: "2.6.1", date: "2026-10-17", items: [
     "單字隕石：同一局不再重複出現相同單字（全部出過一輪才重新洗牌）"
   ]},
@@ -509,9 +512,10 @@ function start(m) {
 $("#menu").onclick = e => { const b = e.target.closest(".mode"); if (b) start(b.dataset.m); };
 
 // 好友對戰的題目：兩邊用同一組題目與選項
-function makeVsQuestions(n = 10) {
-  const BW = W.filter(x => !x.b);   // 好友對戰固定用課本單字
-  return pick(BW, n, ["w"]).map(x => {
+function makeVsQuestions(n = 10, lessons) {
+  const BW = W.filter(x => !x.b);   // 好友對戰固定用課本單字；lessons=房主選的單元
+  const src = lessons?.length ? BW.filter(x => lessons.includes(x.l)) : BW;
+  return pick(src, Math.min(n, src.length), ["w"]).map(x => {
     const enQ = Math.random() < .5;
     const others = pick(BW.filter(y => y.c !== x.c && y.w !== x.w), 3, [enQ ? "c" : "w"]);
     return { id: x.id, enQ, o: shuffle([x, ...others]).map(y => y.id) };
@@ -557,11 +561,15 @@ function playQuiz(P, vs) {
   const qs = vs ? vs.qs.map(q => W[q.id]) : pick(P, Math.min(15, P.length), ["w"], true);
   let i = 0, score = 0, combo = 0, right = 0, raf = 0, locked = false, dead = false; const missed = [];
   openStage(`${topBar("", `<span class="pill">題 <b id="qn">1</b>/${qs.length}</span><span class="pill">分數 <b id="sc">0</b></span>`)}
-    ${vs ? `<div class="vsbar"><div class="side"><span>${esc(S.avatar)} ${nameHtml(S.name, isMeDev())}</span><div class="xpbar"><i id="myProg" style="width:0"></i></div></div>
-      <span class="vs">VS</span><div class="side"><span id="oppName">${esc(vs.opp)}</span><div class="xpbar"><i id="oppProg" style="width:0"></i></div><span class="muted" id="oppInfo">第 0 題・0 分</span></div></div>` : ""}
+    ${vs ? `<div class="vsboard" id="vsb"></div>` : ""}
     <div class="timer"><i id="tbar"></i></div><div class="q" id="q"></div><div class="combo" id="cb"></div><div class="opts" id="opts"></div>`);
   stopFn = () => { dead = true; cancelAnimationFrame(raf); document.removeEventListener("keydown", key); vs?.onQuit?.(); };
-  if (vs) vs.setOpp = (n, sc) => { if (dead) return; $("#oppProg").style.width = n / qs.length * 100 + "%"; $("#oppInfo").textContent = `第 ${n} 題・${sc} 分`; };
+  // 房間對戰的即時計分板：rows = [{ av, name, p, s, me }]，依分數排序
+  if (vs) vs.setBoard = rows => {
+    const b = $("#vsb"); if (dead || !b) return;
+    b.innerHTML = [...rows].sort((x, y) => y.s - x.s).map((r, k) => `<div class="vsrow${r.me ? " me" : ""}"><span class="rk">${k + 1}</span><span class="nm">${esc(r.av)} ${esc(r.name)}</span>
+      <div class="xpbar"><i style="width:${Math.max(0, r.p) / qs.length * 100}%"></i></div><span class="sc">${r.p < 0 ? "離開" : r.s + " 分"}</span></div>`).join("");
+  };
   function key(e) { const n = +e.key; if (n >= 1 && n <= 4) stage.querySelectorAll(".opt")[n - 1]?.click(); }
   document.addEventListener("keydown", key);
   function next() {
@@ -600,7 +608,7 @@ function playQuiz(P, vs) {
         combo = 0; miss(x); missed.push(x); sfx.bad(); $("#cb").textContent = k < 0 ? "時間到" : "";
       }
       $("#sc").textContent = score; i++;
-      if (vs) { $("#myProg").style.width = i / qs.length * 100 + "%"; vs.onAnswer(i, score); }
+      if (vs) vs.onAnswer(i, score);
       setTimeout(next, ok ? 650 : 1500);
     }
   }
@@ -788,4 +796,4 @@ function playListen(P) {
 $("#total").textContent = BOOKN;
 applySkin(); renderChips(); hud(); renderLogDot(); setTimeout(checkAch, 800);
 window.APP = { get S() { return S; }, set S(v) { S = v; }, save, checkAch, nameHtml, titleHtml, DEV_CODE, toast, sfx, modal, esc, lvOf, gain, owns, FREE, renderTop, hud, applySkin, renderChips,
-  refreshTab, showTab, openStage, topBar, home, missedTable, playQuiz, makeVsQuestions, armed, get tab() { return curTab; } };
+  refreshTab, showTab, openStage, topBar, home, LESSONS, WORDS_BOOK: () => W.filter(x => !x.b), missedTable, playQuiz, makeVsQuestions, armed, get tab() { return curTab; } };
