@@ -53,6 +53,12 @@ h2{margin:0;font-size:20px}
 .pill.coin b{color:var(--gold)}
 .pill.gem b{color:var(--gem)}
 .btn.gemb{background:var(--gem)}
+.loginwrap{position:relative}
+.lmenu{position:absolute;right:0;top:calc(100% + 6px);z-index:30;width:230px;display:flex;flex-direction:column;gap:6px;padding:10px;border-radius:12px;background:var(--panel);border:1px solid var(--line);box-shadow:0 8px 24px #0006}
+.lmenu[hidden],.loginwrap[hidden]{display:none}
+.lmenu button{all:unset;cursor:pointer;padding:9px 12px;border-radius:8px;font-weight:700;font-size:14px;background:var(--bg,#0002)}
+.lmenu button:hover{outline:2px solid var(--hot)}
+.lmenu small{color:var(--muted);font-size:11px;line-height:1.4}
 .me{all:unset;cursor:pointer;display:flex;align-items:center;gap:8px;padding:4px 12px 4px 4px;border-radius:999px;background:var(--panel);border:1px solid var(--line)}
 .me:focus-visible{outline:3px solid var(--cool)}
 .av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:20px;background:var(--soft);flex:none}
@@ -244,6 +250,9 @@ th{color:var(--muted);font-weight:600;font-size:13px}
       <button class="me" id="meBtn" type="button"><span class="av" id="meAv"></span><span><span class="nm" id="meName"></span><br><span class="tt" id="meTitle"></span></span></button>
       <span class="pill coin">金幣 <b id="coins">0</b></span>
       <span class="pill gem">寶石 <b id="gems">0</b></span>
+      <div class="loginwrap" id="loginWrap" hidden><button class="btn small" id="loginBtn" type="button">登入 ▾</button>
+        <div class="lmenu" id="loginMenu" hidden><button type="button" data-lg="google">用 Google 登入</button><button type="button" data-lg="guest">遊客登入</button>
+          <small>遊客不用綁定任何帳號，也能加好友、對戰。之後可以再綁定 Google 保存進度。</small></div></div>
     </div>
   </header>
   <div class="xpline"><div class="row" style="justify-content:space-between;font-size:12px"><span>Lv <b id="lv">1</b>・XP <span id="xp">0</span></span><span id="xpNext"></span></div><div class="xpbar"><i id="xpFill"></i></div></div>
@@ -286,7 +295,7 @@ th{color:var(--muted);font-weight:600;font-size:13px}
 <script src="words.js?v=6"></script>
 <script src="bankwords.js?v=8"></script>
 <script src="firebase-config.js?v=7"></script>
-<script src="app.js?v=9"></script>
-<script type="module" src="online.js?v=8"></script>
+<script src="app.js?v=10"></script>
+<script type="module" src="online.js?v=9"></script>
 </body>
 </html>

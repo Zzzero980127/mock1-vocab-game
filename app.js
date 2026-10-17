@@ -7,6 +7,10 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.6", date: "2026-10-17", items: [
+    "右上角新增登入按鈕，可選「Google 登入」或「遊客登入」；遊客不用綁定任何帳號，一樣能加好友、對戰、上排行榜",
+    "遊客可以在個人資料隨時「綁定 Google」把進度保存下來",
+  ] },
   { v: "2.5.1", date: "2026-10-17", items: [
     "好友對戰防刷：獎勵降為贏 +20 金幣、平手 +5、輸 0；每天前 5 場、同一位好友最多 2 場有獎勵（經驗值、勝場也一起算），對手棄權不給獎勵",
   ] },
@@ -90,7 +94,7 @@ const masteryP = (k, th) => () => { const m = mastery(k); return [m.seen >= m.to
 const masteryNote = k => () => { const m = mastery(k); return `已測 ${m.seen}/${m.total} 字・首答正確率 ${(m.acc * 100).toFixed(1)}%`; };
 const ACH = [
   { id: "dev", name: "遊戲設計者", desc: "親手打造了這座單字遊樂場", title: "遊戲設計者", gems: 50, tier: 4, hidden: true, icon: "⚡", p: () => [isMeDev() ? 1 : 0, 1] },
-  { id: "welcome", name: "歡迎加入", desc: "用 Google 帳號登入", title: "新進玩家", gems: 5, tier: 0, p: () => [S.joined ? 1 : 0, 1] },
+  { id: "welcome", name: "歡迎加入", desc: "登入遊樂場（Google 或遊客）", title: "新進玩家", gems: 5, tier: 0, p: () => [S.joined ? 1 : 0, 1] },
   { id: "g10", name: "小試身手", desc: "玩 10 場遊戲", title: "熱身完畢", gems: 2, tier: 0, p: () => [S.games, 10] },
   { id: "g50", name: "遊樂場常客", desc: "玩 50 場遊戲", title: "遊樂場常客", gems: 5, tier: 1, p: () => [S.games, 50] },
   { id: "g200", name: "單字狂熱", desc: "玩 200 場遊戲", title: "單字狂熱者", gems: 15, tier: 2, p: () => [S.games, 200] },

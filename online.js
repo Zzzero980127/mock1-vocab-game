@@ -25,9 +25,9 @@ async function boot() {
     const fb = app.initializeApp(cfg);
     auth = au.getAuth(fb); db = fs.getFirestore(fb);
     au.getRedirectResult(auth).catch(e => A.toast("登入失敗：" + e.code));
-    au.onAuthStateChanged(auth, u => { user = u; u ? onLogin() : onLogout(); });
+    au.onAuthStateChanged(auth, u => { user = u; loginUI(); u ? onLogin() : onLogout(); });
   } catch (e) { loadErr = "線上功能載入失敗，請檢查網路後重新整理。"; console.error(e); }
-  A.refreshTab();
+  loginUI(); A.refreshTab();
 }
 
 /* ---------- 登入與雲端存檔 ---------- */
@@ -39,6 +39,25 @@ async function login() {
     if (e.code !== "auth/popup-closed-by-user") A.toast("登入失敗：" + e.code);
   }
 }
+async function loginGuest() {
+  try { await F.signInAnonymously(auth); }
+  catch (e) { A.toast(["auth/operation-not-allowed", "auth/admin-restricted-operation"].includes(e.code) ? "遊客登入還沒開通（管理者要在 Firebase 啟用「匿名」登入）" : "遊客登入失敗：" + e.code); }
+}
+async function linkGoogle() {
+  try { await F.linkWithPopup(auth, new F.GoogleAuthProvider()); A.toast("已綁定 Google，進度會存在這個帳號"); loginUI(); A.refreshTab(); }
+  catch (e) {
+    if (e.code === "auth/credential-already-in-use") A.toast("這個 Google 帳號已經有存檔。請先登出遊客，再用 Google 登入（遊客進度不會合併）");
+    else if (e.code !== "auth/popup-closed-by-user") A.toast("綁定失敗：" + e.code);
+  }
+}
+// 右上角登入按鈕：未登入才顯示，點開選 Google 或遊客
+function loginUI() {
+  const w = $("#loginWrap"); if (!w) return;
+  w.hidden = !(cfg && auth && !user); if (w.hidden) $("#loginMenu").hidden = true;
+}
+$("#loginBtn")?.addEventListener("click", e => { e.stopPropagation(); $("#loginMenu").hidden = !$("#loginMenu").hidden; });
+$("#loginMenu")?.addEventListener("click", e => { const b = e.target.closest("[data-lg]"); if (!b) return; $("#loginMenu").hidden = true; b.dataset.lg === "guest" ? loginGuest() : login(); });
+document.addEventListener("click", () => { const m = $("#loginMenu"); if (m) m.hidden = true; });
 const PROGRESS = ["xp", "coins", "gems", "best", "owned", "wrong", "games", "wins", "losses", "name", "avatar", "title", "skin", "lessons", "vsDay"];
 function mergeBest(a = {}, b = {}) {
   const o = { ...a };
@@ -261,9 +280,9 @@ function gate(box) {
   if (loadErr) { box.innerHTML = `<div class="card"><h2>線上功能暫時無法使用</h2><p class="muted" style="margin:0">${loadErr}</p></div>`; return false; }
   if (!auth) { box.innerHTML = `<div class="card"><p class="muted">載入中…</p></div>`; return false; }
   if (!user) {
-    box.innerHTML = `<div class="card"><h2>登入才能使用</h2><p class="muted" style="margin:0">用 Google 帳號登入後，可以加好友、看誰在線、跟朋友對戰、上排行榜，進度也會存在雲端。</p>
-      <div><button class="btn" data-login type="button">用 Google 登入</button></div></div>`;
-    box.querySelector("[data-login]").onclick = login; return false;
+    box.innerHTML = `<div class="card"><h2>登入才能使用</h2><p class="muted" style="margin:0">可以用 Google 或「遊客」登入。登入後能加好友、看誰在線、跟朋友對戰、上排行榜，進度也會存在雲端。遊客不用綁定任何帳號。</p>
+      <div class="row"><button class="btn" data-login type="button">用 Google 登入</button><button class="btn ghost" data-guest type="button">遊客登入</button></div></div>`;
+    box.querySelector("[data-login]").onclick = login; box.querySelector("[data-guest]").onclick = loginGuest; return false;
   }
   return true;
 }
@@ -271,13 +290,15 @@ function renderAccount(box) {
   if (!cfg || loadErr || !auth) { box.innerHTML = `<h2>帳號</h2><p class="muted" style="margin:0">${!cfg ? "線上功能還沒開通，目前進度只存在這台裝置。" : loadErr || "載入中…"}</p>`; return; }
   if (!user) {
     box.innerHTML = `<h2>帳號</h2><p class="muted" style="margin:0">目前是訪客，進度只存在這台裝置。登入後會存到雲端，換裝置也接得上；排行榜和好友只會看到你的暱稱，不會顯示 Google 名字或信箱。</p>
-      <div><button class="btn" data-login type="button">用 Google 登入</button></div>`;
-    box.querySelector("[data-login]").onclick = login; return;
+      <div class="row"><button class="btn" data-login type="button">用 Google 登入</button><button class="btn ghost" data-guest type="button">遊客登入</button></div>`;
+    box.querySelector("[data-login]").onclick = login; box.querySelector("[data-guest]").onclick = loginGuest; return;
   }
-  box.innerHTML = `<h2>帳號</h2><p class="muted" style="margin:0">已用 Google 登入，進度會自動存到雲端。</p>
+  const g = user.isAnonymous;
+  box.innerHTML = `<h2>帳號</h2><p class="muted" style="margin:0">${g ? "目前是<b>遊客</b>，進度存在雲端的遊客帳號。清除瀏覽器資料或登出就找不回來，想長期保存請綁定 Google。" : "已用 Google 登入，進度會自動存到雲端。"}</p>
     <div class="row">好友代碼 <span class="code">${esc(A.S.code || "…")}</span></div>
-    <div><button class="btn ghost small" data-logout type="button">登出</button></div>`;
-  box.querySelector("[data-logout]").onclick = e => A.armed(e.target, "再按一次確定登出", () => F.signOut(auth));
+    <div class="row">${g ? `<button class="btn small" data-link type="button">綁定 Google 保存進度</button>` : ""}<button class="btn ghost small" data-logout type="button">登出</button></div>`;
+  box.querySelector("[data-link]")?.addEventListener("click", linkGoogle);
+  box.querySelector("[data-logout]").onclick = e => A.armed(e.target, g ? "遊客登出後帳號會消失，確定？" : "再按一次確定登出", () => F.signOut(auth));
 }
 function renderVs(box) {
   if (!gate(box)) return;
