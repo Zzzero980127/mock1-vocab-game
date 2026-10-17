@@ -9,7 +9,7 @@ const esc = A.esc;
 let F = null, auth = null, db = null, user = null, loadErr = "";
 let pushTimer = 0, beatTimer = 0, unsubs = [], friendUnsubs = [];
 const friends = new Map();          // uid → 公開資料
-let devUid = "", friendIds = [], invites = new Map(), rankCache = {}, rankCat = "xp", rankScope = "all";
+let devUid = "", friendIds = [], invites = new Map(), reqs = new Map(), hiddenReq = new Set(), rankCache = {}, rankCat = "xp", rankScope = "all";
 
 const ON = {
   dirty(force) { if (!user) return; clearTimeout(pushTimer); pushTimer = setTimeout(push, force ? 300 : 2500); },
@@ -85,12 +85,12 @@ async function onLogin() {
   } catch (e) { console.error(e); A.toast("讀取雲端存檔失敗：" + (e.code || e.message)); }
   beat(); clearInterval(beatTimer); beatTimer = setInterval(beat, 60000);
   F.getDoc(F.doc(db, "codes", A.DEV_CODE)).then(c => { devUid = c.exists() ? c.data().uid : ""; A.refreshTab(); }).catch(() => {});
-  listenFriends(); listenInvites(); listenLobby();
+  listenFriends(); listenInvites(); listenRequests(); listenLobby();
   A.refreshTab();
 }
 function onLogout() {
   clearInterval(beatTimer); unsubs.forEach(u => u()); unsubs = []; friendUnsubs.forEach(u => u()); friendUnsubs = [];
-  dropRoom(); lobbyRooms = []; friends.clear(); friendIds = []; invites.clear(); renderInvites();
+  dropRoom(); lobbyRooms = []; friends.clear(); friendIds = []; invites.clear(); reqs.clear(); hiddenReq.clear(); renderInvites();
   A.refreshTab();
 }
 async function makeCode() {
@@ -206,11 +206,46 @@ function listenInvites() {
     renderInvites();
   }, e => { console.error(e); A.toast("收不到房間邀請：" + (e.code || e.message)); }));
 }
+// 好友申請：收到時跳出彈窗（20 秒後收起），沒處理的會留在「對戰」頁的「好友申請」清單
+function listenRequests() {
+  unsubs.push(F.onSnapshot(F.collection(db, "users", user.uid, "requests"), snap => {
+    reqs.clear(); snap.docs.forEach(d => reqs.set(d.id, { ref: d.ref, ...d.data() }));
+    snap.docChanges().forEach(c => {
+      if (c.type !== "added" || !reqs.has(c.doc.id) || hiddenReq.has(c.doc.id)) return;
+      A.sfx.ding(); setTimeout(() => { hiddenReq.add(c.doc.id); renderInvites(); }, 20000);
+    });
+    renderInvites(); softRender();
+  }, e => { console.error(e); A.toast("收不到好友申請：" + (e.code || e.message)); }));
+}
+async function answerReq(id, yes) {
+  const r = reqs.get(id); if (!r) return;
+  reqs.delete(id); renderInvites(); softRender();
+  try {
+    if (yes && !friendIds.includes(id)) await befriend(id);
+    await F.deleteDoc(r.ref);
+  } catch (e) { A.toast("操作失敗：" + (e.code || e.message)); }
+}
+async function sendRequest(fid) {
+  if (friendIds.includes(fid)) return A.toast("你們已經是好友了");
+  if (reqs.has(fid)) return answerReq(fid, true);   // 對方也正好申請我，直接成為好友
+  try {
+    const S = A.S;
+    await F.setDoc(F.doc(db, "users", fid, "requests", user.uid), { from: user.uid, fromName: S.name, fromAv: S.avatar, lv: A.lvOf(S.xp), createdAt: F.serverTimestamp() });
+    A.sfx.tap(); A.toast("已送出好友申請");
+  } catch (e) { A.toast("送出申請失敗：" + (e.code || e.message)); }
+}
 function renderInvites() {
   document.querySelectorAll(".invite").forEach(x => x.remove());
-  const first = [...invites.values()][0]; if (!first) return;
-  const v = first, box = document.createElement("div");
+  const rq = [...reqs.entries()].find(([id]) => !hiddenReq.has(id)), box = document.createElement("div");
   box.className = "invite";
+  if (rq) {
+    const [id, v] = rq;
+    box.innerHTML = `<span class="av">${esc(v.fromAv || "🙂")}</span><b style="flex:1;min-width:140px">${esc(v.fromName || "玩家")} 想加你為好友</b>
+      <button class="btn small green" data-a="yes" type="button">允許</button><button class="btn small ghost" data-a="no" type="button">拒絕</button>`;
+    box.onclick = e => { const a = e.target.closest("button")?.dataset.a; if (a) answerReq(id, a === "yes"); };
+    return document.body.append(box);
+  }
+  const v = [...invites.values()][0]; if (!v) return;
   box.innerHTML = `<span class="av">${esc(v.fromAv)}</span><b style="flex:1;min-width:140px">${esc(v.fromName)} 邀請你加入房間「${esc(v.roomName)}」</b>
     <button class="btn small green" data-a="yes" type="button">加入</button><button class="btn small ghost" data-a="no" type="button">忽略</button>`;
   box.onclick = e => {
@@ -478,7 +513,7 @@ function renderRoom(box) {
     if (b.dataset.leave !== undefined) A.armed(b, "確定？", leaveRoom);
     if (b.dataset.copy !== undefined) navigator.clipboard?.writeText(r.code).then(() => A.toast("已複製房間號"), () => A.toast("房間號是 " + r.code));
     if (b.dataset.start !== undefined) startRoom();
-    if (b.dataset.befriend) befriend(b.dataset.befriend);
+    if (b.dataset.befriend) { sendRequest(b.dataset.befriend); b.disabled = true; b.textContent = "已申請"; }
     if (b.dataset.kick) A.armed(b, "確定？", () => kickMember(b.dataset.kick));
     if (b.dataset.invite) { inviteFriend(b.dataset.invite); b.disabled = true; b.textContent = "已邀請"; }
   };
@@ -499,9 +534,12 @@ function renderVs(box) {
         <button class="btn small" data-join="${esc(r.id)}" type="button">加入</button></div>`).join("")
         : `<p class="muted">目前沒有公開的房間，自己開一間吧。</p>`}</div></div>
     <div class="card"><div class="bar"><h2>我的好友代碼</h2><span class="code">${esc(me.code || "…")}</span></div>
-      <p class="muted" style="margin:0">把代碼給朋友，或輸入朋友的代碼加好友。在房間裡遇到沒加過的人，也能直接按「加好友」。</p>
+      <p class="muted" style="margin:0">把代碼給朋友，或輸入朋友的代碼加好友。在房間裡遇到沒加過的人，可以按「加好友」送出申請，對方同意才會成為好友。</p>
       <div class="type"><input class="field" id="fcode" maxlength="6" placeholder="輸入朋友的 6 位代碼" autocapitalize="characters" autocomplete="off"><button class="btn" data-add type="button">加好友</button></div>
       <div class="row"><button class="btn small ghost" data-copy type="button">複製我的代碼</button></div></div>
+    ${reqs.size ? `<div class="card" style="border-color:var(--hot)"><h2>好友申請（${reqs.size}）</h2><div class="list">${[...reqs.entries()].map(([id, v]) => `<div class="person"><span class="av">${esc(v.fromAv || "🙂")}</span>
+      <div class="info"><b>${esc(v.fromName || "玩家")}</b><small>Lv ${v.lv || 1}・想加你為好友</small></div>
+      <button class="btn small green" data-ok="${id}" type="button">允許</button><button class="btn small ghost" data-no="${id}" type="button">拒絕</button></div>`).join("")}</div></div>` : ""}
     <div class="card"><div class="bar"><h2>好友（${list.length}）</h2><span class="status on"><i></i>${onlineN} 人在線</span></div>
       <p class="muted" style="margin:0">開好房間後，在房間裡就能邀請好友。</p>
       <div class="list">${list.length ? list.map(([id, d]) => `<div class="person"><span class="av">${esc(d.avatar || "🙂")}</span>
@@ -515,6 +553,8 @@ function renderVs(box) {
     if (b.dataset.add !== undefined) addFriend($("#fcode").value);
     if (b.dataset.copy !== undefined) navigator.clipboard?.writeText(me.code).then(() => A.toast("已複製代碼"), () => A.toast("代碼是 " + me.code));
     if (b.dataset.del) A.armed(b, "確定？", () => removeFriend(b.dataset.del));
+    if (b.dataset.ok) answerReq(b.dataset.ok, true);
+    if (b.dataset.no) answerReq(b.dataset.no, false);
   };
   const inp = $("#fcode"); if (inp) inp.onkeydown = e => { if (e.key === "Enter") addFriend(inp.value); };
 }

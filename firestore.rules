@@ -11,6 +11,11 @@ service cloud.firestore {
         allow read, delete: if request.auth != null && request.auth.uid == uid;
         allow create, update: if request.auth != null && request.resource.data.from == request.auth.uid;
       }
+      // 好友申請：任何登入者能對別人送出申請（文件 id 就是自己的 uid），只有被申請的人能讀／刪
+      match /requests/{rid} {
+        allow read, delete: if request.auth != null && request.auth.uid == uid;
+        allow create, update: if request.auth != null && rid == request.auth.uid && request.resource.data.from == request.auth.uid;
+      }
       match /friends/{fid} {
         allow read: if request.auth != null && request.auth.uid == uid;
         allow create, delete: if request.auth != null && (request.auth.uid == uid || request.auth.uid == fid);
