@@ -132,8 +132,8 @@ const ACH = [
   { id: "s4000", name: "大考拼字王", desc: "字庫選大考 4000（Lv1～4 全選），拼字工坊拿到滿分 250", title: "大考拼字王", gems: 25, tier: 3, p: () => [fb("spell", "c4000") || 0, 250] },
   { id: "f1", name: "交個朋友", desc: "加 1 位好友", title: "好夥伴", gems: 3, tier: 0, p: () => [S.friendsN || 0, 1] },
   { id: "f5", name: "人氣王", desc: "加 5 位好友", title: "人氣王", gems: 8, tier: 1, p: () => [S.friendsN || 0, 5] },
-  { id: "v1", name: "首勝", desc: "好友對戰贏 1 場", title: "初露鋒芒", gems: 3, tier: 0, p: () => [S.wins || 0, 1] },
-  { id: "v10", name: "對戰常勝軍", desc: "好友對戰贏 10 場", title: "對戰常勝軍", gems: 15, tier: 2, p: () => [S.wins || 0, 10] },
+  { id: "v1", name: "首勝", desc: "對戰贏 1 場", title: "初露鋒芒", gems: 3, tier: 0, p: () => [S.wins || 0, 1] },
+  { id: "v10", name: "對戰常勝軍", desc: "對戰贏 10 場", title: "對戰常勝軍", gems: 15, tier: 2, p: () => [S.wins || 0, 10] },
 ];
 const TIERS = [["普通", "var(--muted)"], ["稀有", "var(--cool)"], ["史詩", "var(--hot)"], ["傳說", "var(--gold)"], ["開發者", "#ff3fa4"]];
 const FREE = ["game:match", "game:quiz", "game:spell", "skin:default", "av:🙂", "av:🐱", "av:🐶", "title:單字新手"];
@@ -460,7 +460,7 @@ function renderMe() {
     <div class="card"><h2>我的紀錄</h2><div class="tbl"><table>
       <tr><th>項目</th><th>紀錄</th></tr>
       ${MODES.map(o => `<tr><td>${o.name}</td><td>${owns("game:" + o.m) ? bestText(o.m) : "未解鎖"}</td></tr>`).join("")}
-      <tr><td>總遊戲場數</td><td>${S.games}</td></tr><tr><td>好友對戰</td><td>${S.wins} 勝 ${S.losses} 敗</td></tr>
+      <tr><td>總遊戲場數</td><td>${S.games}</td></tr><tr><td>對戰</td><td>${S.wins} 勝 ${S.losses} 敗</td></tr>
       <tr><td>答對過的單字</td><td>${knownN()} / ${W.length}</td></tr>
       <tr><td>錯題本</td><td>${Object.keys(S.wrong).length} 個字</td></tr></table></div></div>
     <div class="card" id="accountBox"></div>`;
