@@ -1,0 +1,580 @@
+/* 一模單字遊樂場：遊戲、金幣、商店、個人資料（離線也能用）。線上功能（登入、好友、對戰、排行）在 online.js */
+const W = DATA.map((x, i) => ({ ...x, id: i }));
+const $ = s => document.querySelector(s);
+const LESSONS = [...new Set(W.map(x => x.l))];
+const KEY = "mock1-vocab-game";
+
+// ---------- 更新日誌（新版本加在最上面） ----------
+const CHANGELOG = [
+  { v: "2.0", date: "2026-10-17", items: [
+    "升等送金幣，每玩一場也會拿到一些金幣",
+    "新增商店：解鎖「單字隕石」「聽音拼字」、網頁造型（深海、櫻花、森林、霓虹、黑金）、頭像、稱號",
+    "新增個人資料：改暱稱、換頭像和稱號，看自己的各項紀錄",
+    "可以用 Google 帳號登入，進度存在雲端，換手機或電腦也接得上",
+    "新增好友：用好友代碼加好友，好友在線會亮綠燈",
+    "新增好友對戰：同一組 10 題快問，即時看到對方分數，贏了多拿金幣",
+    "新增排行榜：等級、各遊戲最高分、對戰勝場，可切換全部玩家／只看好友",
+    "新增更新日誌",
+  ] },
+  { v: "1.1", date: "2026-10-17", items: ["加入音效（答對、答錯、連擊、爆炸、倒數）", "新增「聽音拼字」模式", "網站改放 GitHub Pages"] },
+  { v: "1.0", date: "2026-10-17", items: ["配對消除、快問連擊、單字隕石、拼字工坊四個模式", "錯題本、課次篩選、單字發音"] },
+];
+
+// ---------- 商品 ----------
+const MODES = [
+  { m: "match", tag: "MATCH", name: "配對消除", desc: "英文和中文配成一對，越快越好，配錯加罰 1 秒。", price: 0 },
+  { m: "quiz", tag: "COMBO", name: "快問連擊", desc: "15 題四選一、限時 10 秒，連續答對分數加倍。", price: 0 },
+  { m: "spell", tag: "SPELL", name: "拼字工坊", desc: "看中文，用打亂的字母拼出單字，可用鍵盤直接打。", price: 0 },
+  { m: "rock", tag: "METEOR", name: "單字隕石", desc: "中文隕石往下掉，打出英文擊碎它。掉到地上要抄一次答案。", price: 100 },
+  { m: "listen", tag: "LISTEN", name: "聽音拼字", desc: "只聽發音，把單字打出來。打錯一次給中文提示，再錯就公布答案。", price: 150 },
+];
+const SKINS = [
+  { k: "default", name: "預設", desc: "跟著系統深淺色", price: 0, sw: ["#eef1f8", "#ff6a1a", "#0a9c95"] },
+  { k: "sakura", name: "櫻花", desc: "粉嫩春天", price: 120, sw: ["#fff4f7", "#e8487a", "#7c6cf0"] },
+  { k: "forest", name: "森林", desc: "護眼綠", price: 120, sw: ["#eef5ea", "#d9822b", "#2f8f4e"] },
+  { k: "ocean", name: "深海", desc: "深藍夜讀", price: 150, sw: ["#0b2236", "#ffb02e", "#4fd1ff"] },
+  { k: "neon", name: "霓虹", desc: "電玩感", price: 200, sw: ["#0a0716", "#ff3fa4", "#2ff3e0"] },
+  { k: "gold", name: "黑金", desc: "尊爵不凡", price: 300, sw: ["#121110", "#e8b64c", "#7fc8a9"] },
+];
+const AVATARS = [["🙂", 0], ["🐱", 0], ["🐶", 0], ["🐰", 30], ["🐸", 30], ["🐧", 40], ["🦊", 50], ["🐼", 50], ["🐯", 60], ["🦉", 60], ["🐙", 80], ["🦄", 120], ["🐲", 150], ["🚀", 150], ["👑", 300]];
+const TITLES = [["單字新手", 0], ["拼字工匠", 80], ["配對快手", 80], ["隕石獵人", 120], ["聽力王", 120], ["連擊大師", 150], ["對戰常勝軍", 200], ["一模霸主", 400], ["單字之神", 800]];
+const FREE = ["game:match", "game:quiz", "game:spell", "skin:default", "av:🙂", "av:🐱", "av:🐶", "title:單字新手"];
+
+const lvOf = xp => Math.floor(xp / 300) + 1;
+let S = { xp: 0, wrong: {}, best: {}, lessons: LESSONS.slice(), wrongOnly: false, autoSay: true, sfx: true,
+  owned: FREE.slice(), skin: "default", name: "", avatar: "🙂", title: "單字新手", games: 0, wins: 0, losses: 0, seenVer: "" };
+try { Object.assign(S, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (e) {}
+if (S.coins === undefined) S.coins = 100 + (lvOf(S.xp) - 1) * 60;   // 舊玩家補發已升過的等級
+S.owned = [...new Set([...FREE, ...(S.owned || [])])];
+if (!S.name) S.name = "玩家" + (1000 + Math.random() * 9000 | 0);
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} window.ONLINE?.dirty?.(); };
+const owns = k => S.owned.includes(k);
+
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const norm = s => s.toLowerCase().replace(/[….]+/g, " ").replace(/\s+/g, " ").trim();
+const typable = x => /^[a-z' -]+$/i.test(x.w);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const pos = x => x.p ? x.p : "片語";
+function pick(list, n, keys) {           // 取 n 個，keys 欄位不重複（避免 fair 名詞/形容詞同時出現）
+  const out = [], seen = keys.map(() => new Set());
+  for (const x of shuffle(list)) {
+    if (keys.some((k, i) => seen[i].has(x[k]))) continue;
+    keys.forEach((k, i) => seen[i].add(x[k])); out.push(x);
+    if (out.length === n) break;
+  }
+  return out;
+}
+function speak(w, rate = .9) {
+  try { const u = new SpeechSynthesisUtterance(w.replace(/…/g, " ").replace(/\b(sth|sb)\./g, "")); u.lang = "en-US"; u.rate = rate; speechSynthesis.cancel(); speechSynthesis.speak(u); } catch (e) {}
+}
+const sayIf = w => S.autoSay && speak(w);
+let AC = null;
+function ctx() { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === "suspended") AC.resume(); return AC; }
+function tone(notes, type = "sine", vol = .18) {   // notes: [[頻率, 開始秒, 長度秒], ...]
+  if (!S.sfx) return;
+  try {
+    const ac = ctx(), t = ac.currentTime;
+    for (const [f, at, len] of notes) {
+      const o = ac.createOscillator(), g = ac.createGain(); o.type = type; o.frequency.value = f;
+      g.gain.setValueAtTime(0, t + at); g.gain.linearRampToValueAtTime(vol, t + at + .01); g.gain.exponentialRampToValueAtTime(.001, t + at + len);
+      o.connect(g).connect(ac.destination); o.start(t + at); o.stop(t + at + len + .05);
+    }
+  } catch (e) {}
+}
+function noise(len = .35, vol = .25) {
+  if (!S.sfx) return;
+  try {
+    const ac = ctx(), b = ac.createBuffer(1, ac.sampleRate * len, ac.sampleRate), d = b.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length) ** 2;
+    const src = ac.createBufferSource(), g = ac.createGain(), f = ac.createBiquadFilter();
+    f.type = "lowpass"; f.frequency.value = 900; g.gain.value = vol; src.buffer = b;
+    src.connect(f).connect(g).connect(ac.destination); src.start();
+  } catch (e) {}
+}
+const sfx = {
+  ok: () => tone([[880, 0, .12], [1320, .08, .18]]),
+  bad: () => tone([[220, 0, .18], [165, .12, .25]], "square", .08),
+  tap: () => tone([[600, 0, .05]], "triangle", .1),
+  combo: n => tone([[660, 0, .08], [880, .06, .08], [1100 + Math.min(n, 15) * 40, .12, .2]], "triangle", .14),
+  boom: () => { noise(); tone([[140, 0, .3]], "sawtooth", .08); },
+  land: () => tone([[300, 0, .15], [200, .1, .15], [120, .2, .35]], "sawtooth", .08),
+  win: () => tone([[523, 0, .15], [659, .12, .15], [784, .24, .15], [1047, .36, .4]], "triangle", .16),
+  warn: () => tone([[1000, 0, .04]], "square", .05),
+  coin: () => tone([[988, 0, .08], [1319, .07, .25]], "square", .07),
+  levelup: () => tone([[523, 0, .12], [659, .1, .12], [784, .2, .12], [1047, .3, .12], [784, .42, .1], [1047, .52, .5]], "triangle", .18),
+  ding: () => tone([[1175, 0, .15], [1568, .12, .3]], "sine", .2),
+};
+function toast(t) { const d = document.createElement("div"); d.className = "toast"; d.textContent = t; document.body.append(d); setTimeout(() => d.remove(), 2600); }
+function modal(html) {
+  const m = document.createElement("div"); m.className = "modal"; m.innerHTML = `<div class="box">${html}</div>`;
+  m.addEventListener("click", e => { if (e.target === m || e.target.closest("[data-close]")) m.remove(); });
+  document.body.append(m); return m;
+}
+// 加經驗值：每 3 XP 給 1 金幣，升等另外送 50 + 10×等級
+function gain(xp, extraCoins = 0) {
+  const L0 = lvOf(S.xp); S.xp += xp;
+  const L1 = lvOf(S.xp); let bonus = 0;
+  for (let L = L0 + 1; L <= L1; L++) bonus += 50 + 10 * L;
+  const got = Math.round(xp / 3) + extraCoins + bonus;
+  S.coins += got; save(); renderTop();
+  if (L1 > L0) setTimeout(() => {
+    sfx.levelup();
+    modal(`<div class="big" style="font-size:34px">LEVEL UP</div><div class="av lg" style="margin:0 auto">${S.avatar}</div>
+      <h2>升到 Lv ${L1}！</h2><p class="muted" style="margin:0">升等獎勵 <b style="color:var(--gold)">+${bonus} 金幣</b>，去商店逛逛吧</p>
+      <button class="btn" data-close type="button">太好了</button>`);
+  }, 600);
+  return got;
+}
+function miss(x) { S.wrong[x.id] = (S.wrong[x.id] || 0) + 1; save(); hud(); }
+function hit(x) { if (S.wrong[x.id]) { if (--S.wrong[x.id] <= 0) delete S.wrong[x.id]; save(); hud(); } }
+
+function pool(filter) {
+  let p = W.filter(x => S.lessons.includes(x.l));
+  if (S.wrongOnly) p = p.filter(x => S.wrong[x.id]);
+  return filter ? p.filter(filter) : p;
+}
+function applySkin() { if (S.skin === "default") document.documentElement.removeAttribute("data-skin"); else document.documentElement.dataset.skin = S.skin; }
+function renderTop() {
+  const L = lvOf(S.xp), into = S.xp - (L - 1) * 300;
+  $("#meAv").textContent = S.avatar; $("#meName").textContent = S.name; $("#meTitle").textContent = S.title;
+  $("#coins").textContent = S.coins; $("#lv").textContent = L; $("#xp").textContent = S.xp;
+  $("#xpNext").textContent = `再 ${300 - into} XP 升 Lv ${L + 1}`; $("#xpFill").style.width = into / 3 + "%";
+}
+function bestText(m) {
+  const b = S.best[m]; if (!b) return "還沒玩過";
+  return m === "match" ? `最快 ${b.toFixed(1)} 秒` : `最高 ${b} 分`;
+}
+function hud() {
+  renderTop();
+  $("#wc").textContent = Object.keys(S.wrong).length;
+  $("#poolInfo").textContent = `目前題庫 ${pool().length} 個`;
+  $("#menu").innerHTML = MODES.map(o => {
+    const lock = !owns("game:" + o.m);
+    return `<button class="mode ${lock ? "locked" : ""}" data-m="${o.m}"><span class="tag">${lock ? "🔒 " : ""}${o.tag}</span><h3>${o.name}</h3><p>${o.desc}</p>
+      <span class="best">${lock ? `${o.price} 金幣解鎖` : bestText(o.m)}</span></button>`;
+  }).join("");
+}
+function renderChips() {
+  const all = S.lessons.length === LESSONS.length;
+  $("#chips").innerHTML = `<button class="chip" data-l="*" aria-pressed="${all}">全部</button>` +
+    LESSONS.map(l => `<button class="chip" data-l="${l}" aria-pressed="${!all && S.lessons.includes(l)}">${l}</button>`).join("");
+}
+$("#chips").onclick = e => {
+  const l = e.target.dataset.l; if (!l) return;
+  if (l === "*") S.lessons = LESSONS.slice();
+  else if (S.lessons.length === LESSONS.length) S.lessons = [l];
+  else { S.lessons = S.lessons.includes(l) ? S.lessons.filter(x => x !== l) : [...S.lessons, l]; if (!S.lessons.length) S.lessons = LESSONS.slice(); }
+  save(); renderChips(); hud();
+};
+$("#wrongOnly").checked = S.wrongOnly; $("#autoSay").checked = S.autoSay;
+$("#wrongOnly").onchange = e => { S.wrongOnly = e.target.checked; save(); hud(); };
+$("#autoSay").onchange = e => { S.autoSay = e.target.checked; save(); };
+$("#sfx").checked = S.sfx; $("#sfx").onchange = e => { S.sfx = e.target.checked; save(); if (S.sfx) sfx.ok(); };
+// 需要確認的按鈕：第一次按變「再按一次確定」，3 秒內再按才執行
+function armed(btn, label, fn) {
+  if (btn.dataset.armed && Date.now() - btn.dataset.armed < 3000) { delete btn.dataset.armed; fn(); return; }
+  const old = btn.textContent; btn.dataset.armed = Date.now(); btn.textContent = label;
+  setTimeout(() => { if (btn.isConnected && btn.dataset.armed) { delete btn.dataset.armed; btn.textContent = old; } }, 3000);
+}
+$("#clearWrong").onclick = e => armed(e.target, "再按一次確定清空", () => { S.wrong = {}; save(); hud(); e.target.textContent = "清空錯題本"; toast("錯題本已清空"); });
+
+/* ---------- 分頁 ---------- */
+let curTab = "games";
+function showTab(t) {
+  curTab = t;
+  document.querySelectorAll("#nav button").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === t));
+  document.querySelectorAll(".tab").forEach(s => s.hidden = s.id !== "tab-" + t);
+  refreshTab();
+}
+function refreshTab() {
+  const O = window.ONLINE;
+  if (curTab === "shop") renderShop();
+  if (curTab === "me") renderMe();
+  if (curTab === "log") { if (S.seenVer !== CHANGELOG[0].v) { S.seenVer = CHANGELOG[0].v; save(); } renderLogDot(); }
+  if (curTab === "vs") O ? O.renderVs($("#vsBox")) : $("#vsBox").innerHTML = offline();
+  if (curTab === "rank") O ? O.renderRank($("#rankBox")) : $("#rankBox").innerHTML = offline();
+}
+const offline = () => `<div class="card"><h2>線上功能載入中…</h2><p class="muted">如果一直沒出現，請確認網路連線後重新整理。</p></div>`;
+$("#nav").onclick = e => { const b = e.target.closest("button"); if (b) showTab(b.dataset.tab); };
+$("#meBtn").onclick = () => showTab("me");
+function renderLogDot() {
+  const b = $("#logTab"), d = b.querySelector(".dot"), want = S.seenVer !== CHANGELOG[0].v;
+  if (want && !d) b.insertAdjacentHTML("beforeend", `<span class="dot"></span>`); if (!want && d) d.remove();
+}
+$("#clList").innerHTML = CHANGELOG.map((c, i) => `<div class="cl"><span class="v">v${c.v}</span> <span class="muted">${c.date}</span>${i === 0 ? '<span class="new">最新</span>' : ""}
+  <ul>${c.items.map(t => `<li>${esc(t)}</li>`).join("")}</ul></div>`).join("");
+$("#verText").textContent = `v${CHANGELOG[0].v}`;
+
+/* ---------- 商店 ---------- */
+function buy(k, price, btn) {
+  if (S.coins < price) { sfx.bad(); toast(`金幣不夠，還差 ${price - S.coins}`); return; }
+  armed(btn, `確定花 ${price} 金幣？`, () => { S.coins -= price; S.owned.push(k); save(); sfx.coin(); toast("購買成功！"); hud(); renderShop(); });
+}
+function renderShop() {
+  const sec = (title, sub, items) => `<div class="card"><div class="bar"><h2>${title}</h2><span class="muted">${sub}</span></div><div class="shop">${items}</div></div>`;
+  const btn = (k, price, on, use) => owns(k)
+    ? (use ? `<button class="btn small ${on ? "green" : "ghost"}" data-use="${esc(k)}" type="button">${on ? "使用中" : "使用"}</button>` : `<span class="muted">已解鎖</span>`)
+    : `<span class="price">${price} 金幣</span><button class="btn small" data-buy="${esc(k)}" data-p="${price}" type="button">購買</button>`;
+  $("#shopBox").innerHTML = `<div class="card"><div class="bar"><h2>商店</h2><span class="pill coin">金幣 <b>${S.coins}</b></span></div>
+    <p class="muted" style="margin:0">玩一場遊戲約拿 5～25 金幣，升等送 50 + 10×等級，好友對戰贏了 +40。</p></div>` +
+    sec("遊戲", "解鎖新玩法", MODES.filter(o => o.price).map(o => `<div class="item ${owns("game:" + o.m) ? "on" : ""}"><span class="ico" style="font:400 18px var(--f-display);color:var(--hot)">${o.tag}</span><b>${o.name}</b><small>${o.desc}</small>${btn("game:" + o.m, o.price)}</div>`).join("")) +
+    sec("網頁造型", "換整個網站的配色", SKINS.map(s => `<div class="item ${S.skin === s.k ? "on" : ""}"><span class="swatch">${s.sw.map(c => `<i style="background:${c}"></i>`).join("")}</span><b>${s.name}</b><small>${s.desc}</small>${btn("skin:" + s.k, s.price, S.skin === s.k, 1)}</div>`).join("")) +
+    sec("頭像", "顯示在名字旁邊", AVATARS.map(([a, p]) => `<div class="item ${S.avatar === a ? "on" : ""}"><span class="ico">${a}</span>${btn("av:" + a, p, S.avatar === a, 1)}</div>`).join("")) +
+    sec("稱號", "顯示在名字下面", TITLES.map(([t, p]) => `<div class="item ${S.title === t ? "on" : ""}"><b>${t}</b>${btn("title:" + t, p, S.title === t, 1)}</div>`).join(""));
+}
+function use(k) {
+  const [type, v] = [k.slice(0, k.indexOf(":")), k.slice(k.indexOf(":") + 1)];
+  if (type === "skin") { S.skin = v; applySkin(); }
+  if (type === "av") S.avatar = v;
+  if (type === "title") S.title = v;
+  save(); sfx.tap(); renderTop(); refreshTab();
+}
+$("#shopBox").onclick = e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.buy) buy(b.dataset.buy, +b.dataset.p, b);
+  if (b.dataset.use) use(b.dataset.use);
+};
+
+/* ---------- 個人資料 ---------- */
+function renderMe() {
+  const L = lvOf(S.xp);
+  $("#meBox").innerHTML = `<div class="card"><div class="row" style="gap:14px"><span class="av lg">${S.avatar}</span>
+      <div style="flex:1;min-width:0"><h2>${esc(S.name)}</h2><span class="muted">${esc(S.title)}・Lv ${L}・XP ${S.xp}・金幣 ${S.coins}</span></div></div>
+    <label class="muted" for="nameIn">暱稱（最多 12 字，好友和排行榜會看到）</label>
+    <div class="type"><input class="field" id="nameIn" maxlength="12" value="${esc(S.name)}"><button class="btn" id="nameSave" type="button">儲存</button></div></div>
+    <div class="card"><h2>頭像</h2><div class="chips">${AVATARS.filter(([a]) => owns("av:" + a)).map(([a]) => `<button class="chip" style="font-size:22px" data-use="av:${a}" aria-pressed="${S.avatar === a}">${a}</button>`).join("")}</div>
+      <h2>稱號</h2><div class="chips">${TITLES.filter(([t]) => owns("title:" + t)).map(([t]) => `<button class="chip" data-use="title:${t}" aria-pressed="${S.title === t}">${t}</button>`).join("")}</div>
+      <h2>網頁造型</h2><div class="chips">${SKINS.filter(s => owns("skin:" + s.k)).map(s => `<button class="chip" data-use="skin:${s.k}" aria-pressed="${S.skin === s.k}">${s.name}</button>`).join("")}</div>
+      <p class="muted" style="margin:0">更多頭像、稱號和造型在商店買。</p></div>
+    <div class="card"><h2>我的紀錄</h2><div class="tbl"><table>
+      <tr><th>項目</th><th>紀錄</th></tr>
+      ${MODES.map(o => `<tr><td>${o.name}</td><td>${owns("game:" + o.m) ? bestText(o.m) : "未解鎖"}</td></tr>`).join("")}
+      <tr><td>總遊戲場數</td><td>${S.games}</td></tr><tr><td>好友對戰</td><td>${S.wins} 勝 ${S.losses} 敗</td></tr>
+      <tr><td>錯題本</td><td>${Object.keys(S.wrong).length} 個字</td></tr></table></div></div>
+    <div class="card" id="accountBox"></div>`;
+  window.ONLINE ? window.ONLINE.renderAccount($("#accountBox")) : $("#accountBox").innerHTML = `<h2>帳號</h2><p class="muted">線上功能載入中…</p>`;
+}
+$("#meBox").onclick = e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.use) use(b.dataset.use);
+  if (b.id === "nameSave") {
+    const v = $("#nameIn").value.trim().slice(0, 12);
+    if (!v) { toast("暱稱不能空白"); return; }
+    S.name = v; save(); renderTop(); renderMe(); toast("暱稱已更新");
+  }
+};
+
+/* ---------- 共用：舞台與結算 ---------- */
+let stopFn = null;
+const stage = $("#stage");
+function openStage(html) { if (curTab !== "games") showTab("games"); $("#gamesHome").hidden = true; stage.hidden = false; stage.innerHTML = html; window.scrollTo(0, 0); }
+function home() { if (stopFn) stopFn(); stopFn = null; stage.hidden = true; $("#gamesHome").hidden = false; hud(); }
+const topBar = (name, hudHtml = "") => `<div class="bar"><button class="btn ghost" data-act="home" type="button">← 選單</button><div class="hud">${hudHtml}</div></div>`;
+stage.addEventListener("click", e => {
+  const a = e.target.closest("[data-act]"); if (!a) return;
+  if (a.dataset.act === "home") home();
+  if (a.dataset.act === "again") start(a.dataset.m);
+  if (a.dataset.act === "say") speak(a.dataset.w);
+  if (a.dataset.act === "vs") { home(); showTab("vs"); }
+});
+function missedTable(missed) {
+  const uniq = [...new Map(missed.map(x => [x.id, x])).values()];
+  return uniq.length ? `<h3 style="margin:8px 0 0">這次要再看一眼的（已加入錯題本）</h3>
+    <div class="tbl"><table class="words"><tr><th>單字</th><th>詞性</th><th>中文</th><th>課</th><th></th></tr>
+    ${uniq.map(x => `<tr><td>${esc(x.w)}</td><td>${esc(pos(x))}</td><td>${esc(x.c)}</td><td>${x.l}</td><td><button class="say" data-act="say" data-w="${esc(x.w)}">發音</button></td></tr>`).join("")}</table></div>`
+    : `<p class="center">全對，沒有錯字！</p>`;
+}
+function result(m, bigText, line, missed, xp) {
+  if (stopFn) stopFn(); stopFn = null;
+  S.games++; const coins = gain(xp); sfx.win();
+  openStage(`${topBar()}
+    <div class="big">${bigText}</div>
+    <p class="center">${line}<br>獲得 ${xp} XP・<b style="color:var(--gold)">${coins} 金幣</b></p>
+    ${missedTable(missed)}
+    <div class="bar" style="justify-content:center"><button class="btn" data-act="again" data-m="${m}" type="button">再玩一次</button><button class="btn ghost" data-act="home" type="button">回選單</button></div>`);
+  window.ONLINE?.dirty?.(true);
+}
+function start(m) {
+  if (stopFn) stopFn(); stopFn = null;
+  const o = MODES.find(x => x.m === m);
+  if (!owns("game:" + m)) { showTab("shop"); toast(`「${o.name}」要 ${o.price} 金幣解鎖`); return; }
+  const need = { match: 6, quiz: 4, rock: 3, spell: 3, listen: 3 }[m];
+  const f = m === "rock" || m === "listen" ? typable : m === "spell" ? (x => /^[a-z]{3,12}$/i.test(x.w)) : null;
+  if (pool(f).length < need) { toast(S.wrongOnly ? "錯題本的字太少，先關掉「只練錯題本」" : "選的課次單字太少，多選幾課"); home(); return; }
+  ({ match: playMatch, quiz: playQuiz, rock: playRock, spell: playSpell, listen: playListen })[m](pool(f));
+}
+$("#menu").onclick = e => { const b = e.target.closest(".mode"); if (b) start(b.dataset.m); };
+
+// 好友對戰的題目：兩邊用同一組題目與選項
+function makeVsQuestions(n = 10) {
+  return pick(W, n, ["w"]).map(x => {
+    const enQ = Math.random() < .5;
+    const others = pick(W.filter(y => y.c !== x.c && y.w !== x.w), 3, [enQ ? "c" : "w"]);
+    return { id: x.id, enQ, o: shuffle([x, ...others]).map(y => y.id) };
+  });
+}
+
+/* ---------- 配對消除 ---------- */
+function playMatch(P) {
+  const set = pick(P, 6, ["w", "c"]);
+  const tiles = shuffle(set.flatMap(x => [{ x, t: "en", s: x.w }, { x, t: "zh", s: x.c }]));
+  openStage(`${topBar("", `<span class="pill">時間 <b id="tm">0.0</b></span><span class="pill">罰秒 <b id="pen">0</b></span>`)}
+    <p class="center" style="margin:0">點一個英文、再點它的中文（順序不拘）</p>
+    <div class="grid">${tiles.map((o, i) => `<button class="tile ${o.t}" data-i="${i}">${esc(o.s)}</button>`).join("")}</div>`);
+  const t0 = performance.now(); let pen = 0, left = 6, sel = null; const missed = [];
+  const iv = setInterval(() => $("#tm").textContent = ((performance.now() - t0) / 1000 + pen).toFixed(1), 100);
+  stopFn = () => clearInterval(iv);
+  stage.querySelector(".grid").onclick = e => {
+    const b = e.target.closest(".tile"); if (!b) return;
+    const o = tiles[b.dataset.i];
+    if (!sel) { sel = b; b.classList.add("sel"); sfx.tap(); return; }
+    if (sel === b) { b.classList.remove("sel"); sel = null; return; }
+    const o1 = tiles[sel.dataset.i];
+    if (o1.x === o.x && o1.t !== o.t) {
+      sel.classList.add("done"); b.classList.add("done"); sfx.ok(); sayIf(o.x.w); hit(o.x);
+      sel = null;
+      if (--left === 0) {
+        const t = (performance.now() - t0) / 1000 + pen;
+        const best = !S.best.match || t < S.best.match; if (best) S.best.match = t;
+        result("match", t.toFixed(1) + "s", best ? "新紀錄！" : `最佳紀錄 ${S.best.match.toFixed(1)} 秒`, missed, 20 + Math.max(0, Math.round(40 - t)));
+      }
+    } else {
+      pen += 1; $("#pen").textContent = pen; sfx.bad(); miss(o1.x); missed.push(o1.x);
+      [sel, b].forEach(el => { el.classList.remove("sel", "shake"); void el.offsetWidth; el.classList.add("shake"); });
+      sel = null;
+    }
+  };
+}
+
+
+/* ---------- 快問連擊（好友對戰也用這個，vs 帶入固定題目與回呼） ---------- */
+function playQuiz(P, vs) {
+  const qs = vs ? vs.qs.map(q => W[q.id]) : pick(P, Math.min(15, P.length), ["w"]);
+  let i = 0, score = 0, combo = 0, right = 0, raf = 0, locked = false, dead = false; const missed = [];
+  openStage(`${topBar("", `<span class="pill">題 <b id="qn">1</b>/${qs.length}</span><span class="pill">分數 <b id="sc">0</b></span>`)}
+    ${vs ? `<div class="vsbar"><div class="side"><span>${esc(S.avatar)} ${esc(S.name)}</span><div class="xpbar"><i id="myProg" style="width:0"></i></div></div>
+      <span class="vs">VS</span><div class="side"><span id="oppName">${esc(vs.opp)}</span><div class="xpbar"><i id="oppProg" style="width:0"></i></div><span class="muted" id="oppInfo">第 0 題・0 分</span></div></div>` : ""}
+    <div class="timer"><i id="tbar"></i></div><div class="q" id="q"></div><div class="combo" id="cb"></div><div class="opts" id="opts"></div>`);
+  stopFn = () => { dead = true; cancelAnimationFrame(raf); document.removeEventListener("keydown", key); vs?.onQuit?.(); };
+  if (vs) vs.setOpp = (n, sc) => { if (dead) return; $("#oppProg").style.width = n / qs.length * 100 + "%"; $("#oppInfo").textContent = `第 ${n} 題・${sc} 分`; };
+  function key(e) { const n = +e.key; if (n >= 1 && n <= 4) stage.querySelectorAll(".opt")[n - 1]?.click(); }
+  document.addEventListener("keydown", key);
+  function next() {
+    if (dead) return;
+    if (i >= qs.length) {
+      if (vs) { dead = true; cancelAnimationFrame(raf); document.removeEventListener("keydown", key); stopFn = null; return vs.onEnd(score, right, missed); }
+      const best = !S.best.quiz || score > S.best.quiz; if (best) S.best.quiz = score;
+      return result("quiz", score, `答對 ${right}/${qs.length}${best ? "・新紀錄！" : ""}`, missed, right * 4);
+    }
+    const x = qs[i], enQ = vs ? vs.qs[i].enQ : Math.random() < .5; locked = false;
+    const opts = vs ? vs.qs[i].o.map(id => W[id]) : shuffle([x, ...pick(W.filter(y => y.c !== x.c && y.w !== x.w), 3, [enQ ? "c" : "w"])]);
+    $("#qn").textContent = i + 1;
+    $("#q").className = "q" + (enQ ? " en" : "");
+    $("#q").innerHTML = enQ ? `${esc(x.w)}<small>${esc(pos(x))}</small>` : `${esc(x.c)}<small>${esc(pos(x))}</small>`;
+    $("#opts").innerHTML = opts.map((o, k) => `<button class="opt ${enQ ? "" : "en"}" data-k="${k}"><kbd>${k + 1}</kbd>${esc(enQ ? o.c : o.w)}</button>`).join("");
+    if (enQ) sayIf(x.w);
+    const t0 = performance.now(), T = 10000;
+    let beep = 3;
+    const tick = () => { const r = 1 - (performance.now() - t0) / T; if (r * 10 < beep && beep > 0) { beep--; sfx.warn(); } $("#tbar").style.width = Math.max(0, r) * 100 + "%"; if (r <= 0) answer(-1, 0); else raf = requestAnimationFrame(tick); };
+    raf = requestAnimationFrame(tick);
+    $("#opts").onclick = e => { const b = e.target.closest(".opt"); if (b) answer(+b.dataset.k, 1 - (performance.now() - t0) / T); };
+    function answer(k, r) {
+      if (locked) return; locked = true; cancelAnimationFrame(raf);
+      const btns = stage.querySelectorAll(".opt"), ok = k >= 0 && opts[k] === x;
+      btns[opts.indexOf(x)].classList.add("ok");
+      if (ok) {
+        combo++; right++; hit(x); if (!enQ) sayIf(x.w); combo >= 3 ? sfx.combo(combo) : sfx.ok();
+        const mul = Math.min(3, 1 + Math.floor(combo / 3) * .5);
+        score += Math.round((100 + r * 100) * mul);
+        $("#cb").textContent = combo >= 3 ? `${combo} 連擊 ×${mul}` : "";
+      } else {
+        if (k >= 0) btns[k].classList.add("no");
+        combo = 0; miss(x); missed.push(x); sfx.bad(); $("#cb").textContent = k < 0 ? "時間到" : "";
+      }
+      $("#sc").textContent = score; i++;
+      if (vs) { $("#myProg").style.width = i / qs.length * 100 + "%"; vs.onAnswer(i, score); }
+      setTimeout(next, ok ? 650 : 1500);
+    }
+  }
+  next();
+}
+
+/* ---------- 單字隕石 ---------- */
+function playRock(P) {
+  let score = 0, lives = 3, combo = 0, n = 0, dur = 13000, raf = 0, cur = null, t0 = 0, copying = false, last = null; const missed = [];
+  openStage(`${topBar("", `<span class="pill">生命 <b id="lf">♥♥♥</b></span><span class="pill">分數 <b id="sc">0</b></span><span class="pill">速度 <b id="spd">1</b></span>`)}
+    <div class="arena" id="ar"><div class="ground"></div></div>
+    <div class="msg" id="msg">打出英文後按 Enter</div>
+    <form class="type" id="fm" autocomplete="off"><input id="in" placeholder="輸入英文單字" autocapitalize="off" spellcheck="false"><button class="btn" type="submit">發射</button></form>`);
+  const ar = $("#ar"), inp = $("#in"), msg = $("#msg");
+  stopFn = () => cancelAnimationFrame(raf);
+  const accept = x => new Set(W.filter(y => y.c === x.c && typable(y)).map(y => norm(y.w)));
+  function spawn() {
+    let x; do { x = P[Math.random() * P.length | 0]; } while (P.length > 1 && x === last);
+    last = x; cur = { x, el: document.createElement("div") };
+    cur.el.className = "rock"; cur.el.innerHTML = `${esc(x.c)}<small>${esc(pos(x))}・${x.l}</small>`;
+    ar.append(cur.el); t0 = performance.now(); raf = requestAnimationFrame(fall);
+  }
+  function fall() {
+    const r = (performance.now() - t0) / dur, h = ar.clientHeight - cur.el.offsetHeight - 10;
+    cur.el.style.top = Math.min(r, 1) * h + "px";
+    if (r >= 1) return land(); raf = requestAnimationFrame(fall);
+  }
+  function land() {
+    lives--; combo = 0; miss(cur.x); missed.push(cur.x); sfx.land();
+    $("#lf").textContent = "♥".repeat(lives) + "♡".repeat(3 - lives);
+    sayIf(cur.x.w);
+    if (lives <= 0) return end();
+    copying = true; cur.el.style.borderColor = "var(--bad)";
+    msg.className = "msg bad"; msg.innerHTML = `答案是 <code>${esc(cur.x.w)}</code>，抄一次再繼續`;
+    inp.value = ""; inp.focus();
+  }
+  function end() {
+    const best = !S.best.rock || score > S.best.rock; if (best) S.best.rock = score;
+    result("rock", score, `擊碎 ${n} 顆隕石${best ? "・新紀錄！" : ""}`, missed, n * 3);
+  }
+  $("#fm").onsubmit = e => {
+    e.preventDefault(); const v = norm(inp.value); if (!v || !cur) return;
+    if (copying) {
+      if (v === norm(cur.x.w)) { copying = false; cur.el.remove(); msg.className = "msg"; msg.textContent = "好，下一顆！"; inp.value = ""; spawn(); }
+      else { sfx.bad(); inp.classList.remove("shake"); void inp.offsetWidth; inp.classList.add("shake"); }
+      return;
+    }
+    if (accept(cur.x).has(v)) {
+      cancelAnimationFrame(raf); n++; combo++; hit(cur.x); sfx.boom(); sayIf(cur.x.w);
+      score += 10 * Math.min(5, 1 + Math.floor(combo / 3));
+      dur = Math.max(5000, dur - 350); $("#spd").textContent = Math.round(13000 / dur * 10) / 10;
+      $("#sc").textContent = score; msg.className = "msg good"; msg.textContent = combo >= 3 ? `${combo} 連擊！` : "擊碎！";
+      const el = cur.el; el.classList.add("boom"); setTimeout(() => el.remove(), 350);
+      inp.value = ""; spawn();
+    } else { sfx.bad(); msg.className = "msg bad"; msg.textContent = "不對，再試試"; inp.select(); }
+  };
+  inp.focus(); spawn();
+}
+
+/* ---------- 拼字工坊 ---------- */
+function playSpell(P) {
+  const qs = pick(P, Math.min(10, P.length), ["w"]);
+  let i = 0, score = 0, right = 0; const missed = [];
+  openStage(`${topBar("", `<span class="pill">題 <b id="qn">1</b>/${qs.length}</span><span class="pill">分數 <b id="sc">0</b></span>`)}
+    <div class="q" id="q"></div><div class="slots" id="sl"></div><div class="letters" id="lt"></div>
+    <div class="msg" id="msg"></div>
+    <div class="bar" style="justify-content:center"><button class="btn ghost" id="hintB" type="button">提示一個字母（−10）</button><button class="btn ghost" id="skipB" type="button">看答案</button></div>`);
+  let x, ans, letters, slots, hints, tries, done, dead = false;
+  function key(e) {
+    if (done) return;
+    if (e.key === "Backspace") { e.preventDefault(); undo(); return; }
+    if (/^[a-z]$/i.test(e.key)) { const k = letters.findIndex((c, j) => !c.used && c.ch === e.key.toLowerCase()); if (k >= 0) put(k); }
+  }
+  document.addEventListener("keydown", key);
+  stopFn = () => { dead = true; document.removeEventListener("keydown", key); };
+  function next() {
+    if (dead) return;
+    if (i >= qs.length) {
+      const best = !S.best.spell || score > S.best.spell; if (best) S.best.spell = score;
+      return result("spell", score, `拼對 ${right}/${qs.length}${best ? "・新紀錄！" : ""}`, missed, right * 4);
+    }
+    x = qs[i]; ans = x.w.toLowerCase(); hints = 0; tries = 0; done = false;
+    letters = shuffle([...ans]).map(ch => ({ ch, used: false }));
+    slots = Array(ans.length).fill(null);
+    $("#qn").textContent = i + 1;
+    $("#q").innerHTML = `${esc(x.c)}<small>${esc(pos(x))}・${ans.length} 個字母</small>`;
+    $("#msg").className = "msg"; $("#msg").textContent = "";
+    draw();
+  }
+  function draw() {
+    $("#sl").className = "slots";
+    $("#sl").innerHTML = slots.map((s, j) => `<button class="slot ${s ? "fill" : ""} ${s && s.hint ? "hint" : ""}" data-j="${j}">${s ? s.ch : ""}</button>`).join("");
+    $("#lt").innerHTML = letters.map((c, k) => `<button class="let ${c.used ? "used" : ""}" data-k="${k}">${c.ch}</button>`).join("");
+  }
+  function put(k) {
+    const j = slots.indexOf(null); if (j < 0) return;
+    letters[k].used = true; slots[j] = { ch: letters[k].ch, k }; sfx.tap(); draw();
+    if (!slots.includes(null)) check();
+  }
+  function undo(j) {
+    if (j === undefined) { for (j = slots.length - 1; j >= 0 && !(slots[j] && !slots[j].hint); j--); }
+    if (j < 0 || !slots[j] || slots[j].hint) return;
+    letters[slots[j].k].used = false; slots[j] = null; draw();
+  }
+  function check() {
+    if (slots.map(s => s.ch).join("") === ans) {
+      done = true; right++; const pts = Math.max(5, 30 - hints * 10 - tries * 5); score += pts;
+      tries ? miss(x) : hit(x); if (tries) missed.push(x);
+      $("#sc").textContent = score; $("#sl").classList.add("ok"); sfx.ok();
+      $("#msg").className = "msg good"; $("#msg").textContent = `正確 +${pts}`; sayIf(x.w);
+      i++; setTimeout(next, 900);
+    } else {
+      tries++; sfx.bad(); $("#msg").className = "msg bad"; $("#msg").textContent = "順序不對，點格子把字母拿回來";
+      $("#sl").classList.remove("shake"); void $("#sl").offsetWidth; $("#sl").classList.add("shake");
+    }
+  }
+  $("#lt").onclick = e => { const b = e.target.closest(".let"); if (b && !done) put(+b.dataset.k); };
+  $("#sl").onclick = e => { const b = e.target.closest(".slot"); if (b && !done) undo(+b.dataset.j); };
+  $("#hintB").onclick = () => {
+    if (done) return;
+    // 把錯位的字母全部收回，填入下一個正確字母
+    slots.forEach((s, j) => { if (s && !s.hint && s.ch !== ans[j]) { letters[s.k].used = false; slots[j] = null; } });
+    const j = slots.findIndex((s, j) => !s || s.ch !== ans[j]); if (j < 0) return;
+    if (slots[j]) { letters[slots[j].k].used = false; }
+    const k = letters.findIndex(c => !c.used && c.ch === ans[j]);
+    letters[k].used = true; slots[j] = { ch: ans[j], k, hint: true }; hints++; draw();
+    if (!slots.includes(null)) check();
+  };
+  $("#skipB").onclick = () => {
+    if (done) return; done = true; miss(x); missed.push(x);
+    $("#msg").className = "msg bad"; $("#msg").innerHTML = `答案是 <code>${esc(x.w)}</code>`; speak(x.w);
+    i++; setTimeout(next, 1800);
+  };
+  next();
+}
+
+/* ---------- 聽音拼字 ---------- */
+function playListen(P) {
+  const qs = pick(P, Math.min(10, P.length), ["w"]);
+  let i = 0, score = 0, right = 0, x, tries, done, dead = false; const missed = [];
+  stopFn = () => { dead = true; };
+  openStage(`${topBar("", `<span class="pill">題 <b id="qn">1</b>/${qs.length}</span><span class="pill">分數 <b id="sc">0</b></span>`)}
+    <div class="bar" style="justify-content:center;padding-top:20px"><button class="btn" id="play" type="button">▶ 再聽一次</button><button class="btn ghost" id="slow" type="button">慢速</button></div>
+    <div class="q" id="q" style="min-height:90px"></div>
+    <div class="msg" id="msg"></div>
+    <form class="type" id="fm" autocomplete="off"><input id="in" placeholder="輸入聽到的單字" autocapitalize="off" spellcheck="false"><button class="btn" type="submit">送出</button></form>
+    <div class="bar" style="justify-content:center"><button class="btn ghost" id="skipB" type="button">看答案</button></div>`);
+  const inp = $("#in"), msg = $("#msg"), q = $("#q");
+  $("#play").onclick = () => { speak(x.w); inp.focus(); };
+  $("#slow").onclick = () => { speak(x.w, .55); inp.focus(); };
+  const show = () => { q.className = "q en"; q.innerHTML = `${esc(x.w)}<small>${esc(pos(x))}・${esc(x.c)}</small>`; };
+  function next() {
+    if (dead) return;
+    if (i >= qs.length) {
+      const best = !S.best.listen || score > S.best.listen; if (best) S.best.listen = score;
+      return result("listen", score, `聽對 ${right}/${qs.length}${best ? "・新紀錄！" : ""}`, missed, right * 4);
+    }
+    x = qs[i]; tries = 0; done = false;
+    const n = x.w.split(" ").length;
+    $("#qn").textContent = i + 1; q.className = "q"; q.innerHTML = `<small>${n > 1 ? `片語，${n} 個字` : `${x.w.length} 個字母`}</small>`;
+    msg.className = "msg"; msg.textContent = "聽到什麼就打什麼，按 Enter 送出";
+    inp.value = ""; inp.focus(); setTimeout(() => speak(x.w), 250);
+  }
+  function reveal() {
+    done = true; miss(x); missed.push(x); sfx.bad(); show();
+    msg.className = "msg bad"; msg.textContent = "記一下拼法"; speak(x.w); i++; setTimeout(next, 2200);
+  }
+  $("#fm").onsubmit = e => {
+    e.preventDefault(); if (done) return; const v = norm(inp.value); if (!v) return;
+    if (v === norm(x.w)) {
+      done = true; right++; const pts = tries ? 10 : 25; score += pts; $("#sc").textContent = score;
+      tries ? miss(x) : hit(x); if (tries) missed.push(x); sfx.ok(); show();
+      msg.className = "msg good"; msg.textContent = `正確 +${pts}`; i++; setTimeout(next, 1300);
+    } else if (++tries === 1) {
+      sfx.bad(); msg.className = "msg bad"; msg.textContent = `不對。提示：${pos(x)}　${x.c}`; inp.select(); speak(x.w, .7);
+    } else reveal();
+  };
+  $("#skipB").onclick = () => { if (!done) reveal(); };
+  next();
+}
+
+$("#total").textContent = W.length;
+applySkin(); renderChips(); hud(); renderLogDot();
+window.APP = { get S() { return S; }, set S(v) { S = v; }, save, toast, sfx, modal, esc, lvOf, gain, owns, FREE, renderTop, hud, applySkin, renderChips,
+  refreshTab, showTab, openStage, topBar, home, missedTable, playQuiz, makeVsQuestions, armed, get tab() { return curTab; } };

@@ -1,0 +1,25 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{db}/documents {
+    // 玩家公開資料（暱稱、頭像、等級、紀錄）：登入者都能讀，只有本人能寫
+    match /users/{uid} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == uid;
+      // 好友名單：本人能讀；加／刪好友時雙方都能寫對方名單裡「自己那一筆」
+      match /friends/{fid} {
+        allow read: if request.auth != null && request.auth.uid == uid;
+        allow create, delete: if request.auth != null && (request.auth.uid == uid || request.auth.uid == fid);
+      }
+    }
+    // 好友代碼 → uid
+    match /codes/{code} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
+    }
+    // 對戰：只有對戰雙方能讀寫
+    match /matches/{id} {
+      allow read, update: if request.auth != null && request.auth.uid in [resource.data.a, resource.data.b];
+      allow create: if request.auth != null && request.resource.data.a == request.auth.uid;
+    }
+  }
+}
