@@ -10,7 +10,7 @@
 /* 版面：上方玩家列＋分頁，下方依分頁換內容；進入遊戲後整個舞台換成遊戲畫面 */
 :root{
   --bg:#eef1f8; --panel:#ffffff; --ink:#1a1d36; --muted:#646a8c; --line:#d8dcec;
-  --hot:#ff6a1a; --cool:#0a9c95; --good:#1c9a52; --bad:#df3b4a; --soft:#fff1e8; --gold:#d99a00;
+  --hot:#ff6a1a; --cool:#0a9c95; --good:#1c9a52; --bad:#df3b4a; --soft:#fff1e8; --gold:#d99a00; --gem:#7a4dff;
   --f-display:"Bungee","Noto Sans TC",system-ui,sans-serif;
   --f-body:"Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;
   --f-mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
@@ -18,11 +18,20 @@
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#11132a; --panel:#1b1e3c; --ink:#eef0ff; --muted:#9ca2cc; --line:#2e3360;
-  --hot:#ff8a3d; --cool:#2fd0c6; --good:#3fcf7d; --bad:#ff6b78; --soft:#2a2340; --gold:#ffc83d; color-scheme:dark}}
+  --hot:#ff8a3d; --cool:#2fd0c6; --good:#3fcf7d; --bad:#ff6b78; --soft:#2a2340; --gold:#ffc83d; --gem:#b49bff; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#11132a; --panel:#1b1e3c; --ink:#eef0ff; --muted:#9ca2cc; --line:#2e3360;
-  --hot:#ff8a3d; --cool:#2fd0c6; --good:#3fcf7d; --bad:#ff6b78; --soft:#2a2340; --gold:#ffc83d; color-scheme:dark}
+  --hot:#ff8a3d; --cool:#2fd0c6; --good:#3fcf7d; --bad:#ff6b78; --soft:#2a2340; --gold:#ffc83d; --gem:#b49bff; color-scheme:dark}
 /* 商店造型（固定配色，不跟系統深淺色） */
+:root[data-skin]{--gem:#b49bff}
+:root[data-skin="sakura"],:root[data-skin="forest"]{--gem:#7a4dff}
+:root[data-skin="galaxy"]{--bg:#0d0b24;--panel:#1a1640;--ink:#f1edff;--muted:#a69ccc;--line:#2f2866;--hot:#b18cff;--cool:#6be3ff;--good:#6bf0a0;--bad:#ff6b8a;--soft:#251e55;--gold:#ffd36b;--gem:#ff9de2;color-scheme:dark}
+:root[data-skin="galaxy"] body{background-image:radial-gradient(1px 1px at 20px 30px,#fff,transparent),radial-gradient(1.5px 1.5px at 120px 80px,#ffe9a8,transparent),radial-gradient(1px 1px at 200px 160px,#fff,transparent),radial-gradient(1px 1px at 60px 210px,#cfc4ff,transparent);background-size:240px 240px}
+:root[data-skin="lava"]{--bg:#1a0b07;--panel:#2a120b;--ink:#ffeee5;--muted:#c79a86;--line:#4a2214;--hot:#ff5a1f;--cool:#ffc23d;--good:#8be06b;--bad:#ff4d4d;--soft:#3a170c;--gold:#ffc23d;--gem:#ff8fd0;color-scheme:dark}
+:root[data-skin="lava"] body{background-image:radial-gradient(ellipse at 50% 120%,rgba(255,90,31,.35),transparent 60%);background-attachment:fixed}
+:root[data-skin="aurora"]{--bg:#06141f;--panel:#0d2230;--ink:#e8fff8;--muted:#8fb8b0;--line:#1b3b4a;--hot:#3df5b0;--cool:#8a7dff;--good:#3df5b0;--bad:#ff6b8a;--soft:#11303f;--gold:#ffe07a;--gem:#c7a6ff;color-scheme:dark}
+:root[data-skin="aurora"] body{background-image:linear-gradient(120deg,rgba(61,245,176,.18),rgba(138,125,255,.18),rgba(61,200,255,.15),rgba(61,245,176,.18));background-size:300% 300%;background-attachment:fixed;animation:aurora 18s ease infinite}
+@keyframes aurora{50%{background-position:100% 50%}}
 :root[data-skin="ocean"]{--bg:#0b2236;--panel:#10324d;--ink:#e6f6ff;--muted:#8fb6cc;--line:#1d4a6b;--hot:#ffb02e;--cool:#4fd1ff;--good:#4ade80;--bad:#ff6b6b;--soft:#13405f;--gold:#ffd54a;color-scheme:dark}
 :root[data-skin="sakura"]{--bg:#fff4f7;--panel:#ffffff;--ink:#3a1f2b;--muted:#9a6b7c;--line:#f3d3de;--hot:#e8487a;--cool:#7c6cf0;--good:#1f9d55;--bad:#d93a4a;--soft:#ffe4ec;--gold:#c98a00;color-scheme:light}
 :root[data-skin="forest"]{--bg:#eef5ea;--panel:#fbfdf8;--ink:#1f2a1c;--muted:#61705b;--line:#d3e2cb;--hot:#d9822b;--cool:#2f8f4e;--good:#2f8f4e;--bad:#c9443b;--soft:#f6ecd9;--gold:#b88400;color-scheme:light}
@@ -42,6 +51,8 @@ h2{margin:0;font-size:20px}
 .pill{font:700 13px var(--f-mono);padding:6px 12px;border-radius:999px;background:var(--panel);border:1px solid var(--line);font-variant-numeric:tabular-nums;white-space:nowrap}
 .pill b{color:var(--hot)}
 .pill.coin b{color:var(--gold)}
+.pill.gem b{color:var(--gem)}
+.btn.gemb{background:var(--gem)}
 .me{all:unset;cursor:pointer;display:flex;align-items:center;gap:8px;padding:4px 12px 4px 4px;border-radius:999px;background:var(--panel);border:1px solid var(--line)}
 .me:focus-visible{outline:3px solid var(--cool)}
 .av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:20px;background:var(--soft);flex:none}
@@ -174,6 +185,24 @@ th{color:var(--muted);font-weight:600;font-size:13px}
 .cl ul{margin:6px 0 0;padding-left:20px;font-size:14px}
 .new{margin-left:8px;font-size:11px;font-weight:700;color:#fff;background:var(--hot);border-radius:6px;padding:1px 6px}
 .muted{color:var(--muted);font-size:14px}
+/* 成就 */
+.achs{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.ach{background:var(--panel);border:1.5px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:6px;opacity:.78}
+.ach.got{opacity:1;border-color:var(--tc)}
+.ach .trophy{font-size:24px;line-height:1}
+.ach:not(.got) .trophy{filter:grayscale(1)}
+.ach .tier{font-size:11px;font-weight:700;color:var(--tc);border:1px solid var(--tc);border-radius:6px;padding:0 6px}
+.ach small{color:var(--muted);font-size:12px}
+.ach small.ok{color:var(--good);font-weight:700}
+.plate{display:flex;gap:8px;align-items:center;background:var(--bg);border-radius:10px;padding:6px 8px}
+.plate .av{width:28px;height:28px;font-size:16px}
+.plate b{display:block;font-size:13px;line-height:1.2}
+.plate small{color:var(--tc)!important;font-weight:700}
+.achpop{position:fixed;top:calc(14px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:26;display:flex;gap:10px;align-items:center;background:var(--panel);border:2px solid var(--gold);border-radius:14px;padding:10px 16px;box-shadow:0 10px 30px rgba(0,0,0,.3);cursor:pointer;animation:drop .4s;max-width:calc(100% - 32px)}
+.achpop .trophy{font-size:30px}
+.achpop small{display:block;font-size:12px;color:var(--muted)}
+.achpop b{display:block;font-size:16px}
+@keyframes drop{from{transform:translate(-50%,-30px);opacity:0}}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;z-index:30;max-width:calc(100% - 32px)}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:grid;place-items:center;z-index:20;padding:16px}
 .modal .box{background:var(--panel);border-radius:18px;padding:24px;max-width:360px;width:100%;text-align:center;display:flex;flex-direction:column;gap:10px;animation:pop .35s}
@@ -192,6 +221,7 @@ th{color:var(--muted);font-weight:600;font-size:13px}
     <div class="stats">
       <button class="me" id="meBtn" type="button"><span class="av" id="meAv"></span><span><span class="nm" id="meName"></span><br><span class="tt" id="meTitle"></span></span></button>
       <span class="pill coin">金幣 <b id="coins">0</b></span>
+      <span class="pill gem">寶石 <b id="gems">0</b></span>
     </div>
   </header>
   <div class="xpline"><div class="row" style="justify-content:space-between;font-size:12px"><span>Lv <b id="lv">1</b>・XP <span id="xp">0</span></span><span id="xpNext"></span></div><div class="xpbar"><i id="xpFill"></i></div></div>
@@ -200,6 +230,7 @@ th{color:var(--muted);font-weight:600;font-size:13px}
     <button role="tab" data-tab="games" aria-selected="true">遊戲</button>
     <button role="tab" data-tab="vs">好友對戰</button>
     <button role="tab" data-tab="rank">排行榜</button>
+    <button role="tab" data-tab="ach">成就</button>
     <button role="tab" data-tab="shop">商店</button>
     <button role="tab" data-tab="me">個人資料</button>
     <button role="tab" data-tab="log" id="logTab">更新日誌</button>
@@ -224,14 +255,15 @@ th{color:var(--muted);font-weight:600;font-size:13px}
 
   <section id="tab-vs" class="tab" hidden><div id="vsBox" style="display:flex;flex-direction:column;gap:14px"></div></section>
   <section id="tab-rank" class="tab" hidden><div id="rankBox" style="display:flex;flex-direction:column;gap:14px"></div></section>
+  <section id="tab-ach" class="tab" hidden><div id="achBox" style="display:flex;flex-direction:column;gap:14px"></div></section>
   <section id="tab-shop" class="tab" hidden><div id="shopBox" style="display:flex;flex-direction:column;gap:14px"></div></section>
   <section id="tab-me" class="tab" hidden><div id="meBox" style="display:flex;flex-direction:column;gap:14px"></div></section>
   <section id="tab-log" class="tab" hidden><div class="card"><h2>更新日誌</h2><div id="clList"></div></div></section>
 </div>
 
-<script src="words.js?v=4"></script>
-<script src="firebase-config.js?v=4"></script>
-<script src="app.js?v=4"></script>
-<script type="module" src="online.js?v=4"></script>
+<script src="words.js?v=5"></script>
+<script src="firebase-config.js?v=5"></script>
+<script src="app.js?v=5"></script>
+<script type="module" src="online.js?v=5"></script>
 </body>
 </html>

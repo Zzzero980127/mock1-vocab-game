@@ -39,7 +39,7 @@ async function login() {
     if (e.code !== "auth/popup-closed-by-user") A.toast("登入失敗：" + e.code);
   }
 }
-const PROGRESS = ["xp", "coins", "best", "owned", "wrong", "games", "wins", "losses", "name", "avatar", "title", "skin", "lessons"];
+const PROGRESS = ["xp", "coins", "gems", "best", "owned", "wrong", "games", "wins", "losses", "name", "avatar", "title", "skin", "lessons"];
 function mergeBest(a = {}, b = {}) {
   const o = { ...a };
   for (const [k, v] of Object.entries(b)) o[k] = o[k] == null ? v : k === "match" ? Math.min(o[k], v) : Math.max(o[k], v);
@@ -54,8 +54,12 @@ async function onLogin() {
       const best = mergeBest(S.best, c.best), owned = [...new Set([...A.FREE, ...(S.owned || []), ...(c.owned || [])])];
       if ((c.xp || 0) >= S.xp) PROGRESS.forEach(k => { if (c[k] !== undefined) S[k] = c[k]; });
       S.best = best; S.owned = owned; S.code = c.code;
+      S.ach = { ...(S.ach || {}), ...(c.ach || {}) }; S.known = { ...(S.known || {}), ...(c.known || {}) };
+      if (c.joined) S.joined = c.joined;
     }
+    if (!S.joined) S.joined = new Date().toLocaleDateString("sv");
     if (!S.code) S.code = await makeCode();
+    A.checkAch();
     A.save(); A.applySkin(); A.renderChips(); A.hud();
     await push();
     A.toast(`已登入，歡迎 ${S.name}！`);
@@ -82,6 +86,7 @@ function pub() {
   for (const [k, v] of Object.entries(S.best || {})) if (typeof v === "number") best[k] = v;
   return { name: S.name, avatar: S.avatar, title: S.title, skin: S.skin, xp: S.xp, level: A.lvOf(S.xp), coins: S.coins, best,
     owned: S.owned, wrong: S.wrong, lessons: S.lessons, games: S.games || 0, wins: S.wins || 0, losses: S.losses || 0,
+    gems: S.gems || 0, ach: S.ach || {}, achN: Object.keys(S.ach || {}).length, known: S.known || {}, joined: S.joined || "",
     code: S.code || "", lastSeen: F.serverTimestamp(), updatedAt: F.serverTimestamp() };
 }
 async function push() {
@@ -99,6 +104,7 @@ document.addEventListener("visibilitychange", beat);
 function listenFriends() {
   const u = F.onSnapshot(F.collection(db, "users", user.uid, "friends"), snap => {
     friendIds = snap.docs.map(d => d.id);
+    A.S.friendsN = friendIds.length; A.checkAch();
     friendUnsubs.forEach(f => f()); friendUnsubs = [];
     for (const id of [...friends.keys()]) if (!friendIds.includes(id)) friends.delete(id);
     for (let i = 0; i < friendIds.length; i += 30) {
@@ -231,7 +237,7 @@ function startMatch(ref, d, side) {
     const S = A.S, quit = opp.p < 0, res = quit || mine.score > opp.s ? "win" : mine.score < opp.s ? "lose" : "tie";
     if (res === "win") S.wins = (S.wins || 0) + 1; if (res === "lose") S.losses = (S.losses || 0) + 1;
     S.games++;
-    const coins = A.gain(mine.right * 4, { win: 40, lose: 10, tie: 20 }[res]); A.sfx[res === "lose" ? "bad" : "win"]();
+    const coins = A.gain(mine.right * 4, { win: 40, lose: 10, tie: 20 }[res]); A.checkAch(); A.sfx[res === "lose" ? "bad" : "win"]();
     F.updateDoc(ref, { status: "done" }).catch(() => {});
     A.openStage(`${A.topBar()}<div class="big">${{ win: "勝利！", lose: "惜敗", tie: "平手" }[res]}</div>
       <p class="center">你 <b>${mine.score}</b> ： <b>${quit ? "棄權" : opp.s}</b> ${esc(oppName)}<br>獲得 ${mine.right * 4} XP・<b style="color:var(--gold)">${coins} 金幣</b></p>
@@ -295,12 +301,13 @@ function renderVs(box) {
   const inp = $("#fcode"); if (inp) inp.onkeydown = e => { if (e.key === "Enter") addFriend(inp.value); };
 }
 const CATS = [["xp", "等級", "desc"], ["best.quiz", "快問連擊", "desc"], ["best.rock", "單字隕石", "desc"], ["best.spell", "拼字工坊", "desc"],
-  ["best.listen", "聽音拼字", "desc"], ["best.match", "配對最快", "asc"], ["wins", "對戰勝場", "desc"]];
+  ["best.listen", "聽音拼字", "desc"], ["best.match", "配對最快", "asc"], ["wins", "對戰勝場", "desc"], ["achN", "成就數", "desc"]];
 const getPath = (d, p) => p.split(".").reduce((o, k) => o?.[k], d);
 function fmt(cat, d) {
   const v = getPath(d, cat);
   if (cat === "xp") return `Lv ${A.lvOf(v || 0)}<small class="muted"> ${v || 0} XP</small>`;
   if (cat === "best.match") return `${v.toFixed(1)} 秒`;
+  if (cat === "achN") return `${v || 0} 個`;
   return cat === "wins" ? `${v || 0} 勝` : `${v} 分`;
 }
 async function renderRank(box) {
@@ -315,7 +322,7 @@ async function renderRank(box) {
   try {
     if (rankScope === "friends") {
       rows = [[user.uid, pub()], ...friendIds.map(id => [id, friends.get(id)]).filter(([, d]) => d)]
-        .filter(([, d]) => cat === "xp" || cat === "wins" || getPath(d, cat) != null);
+        .filter(([, d]) => cat === "xp" || cat === "wins" || cat === "achN" || getPath(d, cat) != null);
       rows.sort((x, y) => (dir === "asc" ? 1 : -1) * ((getPath(x[1], cat) || 0) - (getPath(y[1], cat) || 0)));
     } else {
       const c = rankCache[cat];
@@ -328,7 +335,7 @@ async function renderRank(box) {
   } catch (e) { console.error(e); const l = $("#rkList"); if (l) l.innerHTML = `<p class="muted">讀取排行榜失敗（${esc(e.code || e.message)}）</p>`; return; }
   const l = $("#rkList"); if (!l || rankCat !== cat) return;
   l.innerHTML = rows.length ? rows.map(([id, d], i) => `<div class="person ${id === user.uid ? "me-row" : ""}"><span class="rank r${i + 1}">${i + 1}</span><span class="av">${esc(d.avatar || "🙂")}</span>
-    <div class="info"><b>${esc(d.name || "玩家")}${id === user.uid ? "（我）" : ""}</b><small>${esc(d.title || "")}</small></div><span class="score">${fmt(cat, d)}</span></div>`).join("")
+    <div class="info"><b>${esc(d.name || "玩家")}${id === user.uid ? "（我）" : ""}</b><small>${esc(d.title || "")}${d.joined ? `・${d.joined} 加入` : ""}</small></div><span class="score">${fmt(cat, d)}</span></div>`).join("")
     : `<p class="muted">還沒有人有這項紀錄，快去玩一場搶第一！</p>`;
 }
 

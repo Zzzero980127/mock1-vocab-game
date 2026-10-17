@@ -6,6 +6,13 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.2", date: "2026-10-17", items: [
+    "新增成就系統：20 個成就，可以先預覽條件和進度；稱號改成解鎖成就才拿得到，不能用金幣買",
+    "用 Google 登入會拿到「歡迎加入」成就，並顯示加入日期",
+    "新增寶石：每升一級 +1、每 5 級 +5，解鎖成就也會給寶石（越難給越多）",
+    "商店新增寶石區：稀有頭像，以及星空、熔岩、極光三種特殊造型",
+    "排行榜新增「成就數」",
+  ] },
   { v: "2.1", date: "2026-10-17", items: [
     "題目是英文時，一出題就先自動唸（設定改名為「出題自動唸英文」）",
     "題目旁加「🔊 再聽一次」按鈕，快捷鍵 R；在輸入框裡打字時改用 Alt+R 或 Ctrl+空白鍵",
@@ -40,14 +47,42 @@ const SKINS = [
   { k: "ocean", name: "深海", desc: "深藍夜讀", price: 150, sw: ["#0b2236", "#ffb02e", "#4fd1ff"] },
   { k: "neon", name: "霓虹", desc: "電玩感", price: 200, sw: ["#0a0716", "#ff3fa4", "#2ff3e0"] },
   { k: "gold", name: "黑金", desc: "尊爵不凡", price: 300, sw: ["#121110", "#e8b64c", "#7fc8a9"] },
+  { k: "galaxy", name: "星空", desc: "滿天星斗", price: 15, cur: "gem", sw: ["#0d0b24", "#b18cff", "#ffd36b"] },
+  { k: "lava", name: "熔岩", desc: "火山爆發", price: 15, cur: "gem", sw: ["#1a0b07", "#ff5a1f", "#ffc23d"] },
+  { k: "aurora", name: "極光", desc: "會流動的極光", price: 25, cur: "gem", sw: ["#06141f", "#3df5b0", "#8a7dff"] },
 ];
-const AVATARS = [["🙂", 0], ["🐱", 0], ["🐶", 0], ["🐰", 30], ["🐸", 30], ["🐧", 40], ["🦊", 50], ["🐼", 50], ["🐯", 60], ["🦉", 60], ["🐙", 80], ["🦄", 120], ["🐲", 150], ["🚀", 150], ["👑", 300]];
-const TITLES = [["單字新手", 0], ["拼字工匠", 80], ["配對快手", 80], ["隕石獵人", 120], ["聽力王", 120], ["連擊大師", 150], ["對戰常勝軍", 200], ["一模霸主", 400], ["單字之神", 800]];
+const AVATARS = [["🙂", 0], ["🐱", 0], ["🐶", 0], ["🐰", 30], ["🐸", 30], ["🐧", 40], ["🦊", 50], ["🐼", 50], ["🐯", 60], ["🦉", 60], ["🐙", 80], ["🦄", 120], ["🐲", 150], ["🚀", 150], ["👑", 300],
+  ["🦖", 5, "gem"], ["🪐", 8, "gem"], ["🌈", 8, "gem"], ["🔥", 10, "gem"], ["⚡", 10, "gem"], ["🦋", 12, "gem"], ["💎", 20, "gem"], ["🏆", 25, "gem"]];
+// 成就：p() 回傳 [目前進度, 目標]；解鎖送稱號和寶石
+const knownN = () => Object.keys(S.known || {}).length;
+const ACH = [
+  { id: "welcome", name: "歡迎加入", desc: "用 Google 帳號登入", title: "新進玩家", gems: 5, tier: 0, p: () => [S.joined ? 1 : 0, 1] },
+  { id: "g10", name: "小試身手", desc: "玩 10 場遊戲", title: "熱身完畢", gems: 2, tier: 0, p: () => [S.games, 10] },
+  { id: "g50", name: "遊樂場常客", desc: "玩 50 場遊戲", title: "遊樂場常客", gems: 5, tier: 1, p: () => [S.games, 50] },
+  { id: "g200", name: "單字狂熱", desc: "玩 200 場遊戲", title: "單字狂熱者", gems: 15, tier: 2, p: () => [S.games, 200] },
+  { id: "lv5", name: "漸入佳境", desc: "升到 Lv 5", title: "漸入佳境", gems: 3, tier: 0, p: () => [lvOf(S.xp), 5] },
+  { id: "lv10", name: "十全十美", desc: "升到 Lv 10", title: "十級玩家", gems: 8, tier: 1, p: () => [lvOf(S.xp), 10] },
+  { id: "lv20", name: "一模霸主", desc: "升到 Lv 20", title: "一模霸主", gems: 20, tier: 2, p: () => [lvOf(S.xp), 20] },
+  { id: "w100", name: "百字斬", desc: "答對過 100 個不同的單字", title: "百字斬", gems: 5, tier: 1, p: () => [knownN(), 100] },
+  { id: "wall", name: "單字之神", desc: "336 個單字全部答對過", title: "單字之神", gems: 30, tier: 3, p: () => [knownN(), W.length] },
+  { id: "m15", name: "配對快手", desc: "配對消除 15 秒內完成", title: "配對快手", gems: 5, tier: 1, p: () => [S.best.match && S.best.match <= 15 ? 1 : 0, 1] },
+  { id: "m10", name: "閃電配對", desc: "配對消除 10 秒內完成", title: "閃電手", gems: 10, tier: 2, p: () => [S.best.match && S.best.match <= 10 ? 1 : 0, 1] },
+  { id: "q2500", name: "連擊大師", desc: "快問連擊拿到 2500 分", title: "連擊大師", gems: 5, tier: 1, p: () => [S.best.quiz || 0, 2500] },
+  { id: "q4500", name: "快問之王", desc: "快問連擊拿到 4500 分", title: "快問之王", gems: 12, tier: 2, p: () => [S.best.quiz || 0, 4500] },
+  { id: "r300", name: "隕石獵人", desc: "單字隕石拿到 300 分", title: "隕石獵人", gems: 6, tier: 1, p: () => [S.best.rock || 0, 300] },
+  { id: "s250", name: "拼字工匠", desc: "拼字工坊拿到 250 分", title: "拼字工匠", gems: 6, tier: 1, p: () => [S.best.spell || 0, 250] },
+  { id: "l250", name: "順風耳", desc: "聽音拼字 10 題全部一次聽對（250 分）", title: "聽力王", gems: 10, tier: 2, p: () => [S.best.listen || 0, 250] },
+  { id: "f1", name: "交個朋友", desc: "加 1 位好友", title: "好夥伴", gems: 3, tier: 0, p: () => [S.friendsN || 0, 1] },
+  { id: "f5", name: "人氣王", desc: "加 5 位好友", title: "人氣王", gems: 8, tier: 1, p: () => [S.friendsN || 0, 5] },
+  { id: "v1", name: "首勝", desc: "好友對戰贏 1 場", title: "初露鋒芒", gems: 3, tier: 0, p: () => [S.wins || 0, 1] },
+  { id: "v10", name: "對戰常勝軍", desc: "好友對戰贏 10 場", title: "對戰常勝軍", gems: 15, tier: 2, p: () => [S.wins || 0, 10] },
+];
+const TIERS = [["普通", "var(--muted)"], ["稀有", "var(--cool)"], ["史詩", "var(--hot)"], ["傳說", "var(--gold)"]];
 const FREE = ["game:match", "game:quiz", "game:spell", "skin:default", "av:🙂", "av:🐱", "av:🐶", "title:單字新手"];
 
 const lvOf = xp => Math.floor(xp / 300) + 1;
 let S = { xp: 0, wrong: {}, best: {}, lessons: LESSONS.slice(), wrongOnly: false, autoSay: true, sfx: true,
-  owned: FREE.slice(), skin: "default", name: "", avatar: "🙂", title: "單字新手", games: 0, wins: 0, losses: 0, seenVer: "" };
+  owned: FREE.slice(), skin: "default", name: "", avatar: "🙂", title: "單字新手", games: 0, wins: 0, losses: 0, seenVer: "", gems: 0, ach: {}, known: {}, joined: "" };
 try { Object.assign(S, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (e) {}
 if (S.coins === undefined) S.coins = 100 + (lvOf(S.xp) - 1) * 60;   // 舊玩家補發已升過的等級
 S.owned = [...new Set([...FREE, ...(S.owned || [])])];
@@ -128,19 +163,22 @@ function modal(html) {
 function gain(xp, extraCoins = 0) {
   const L0 = lvOf(S.xp); S.xp += xp;
   const L1 = lvOf(S.xp); let bonus = 0;
-  for (let L = L0 + 1; L <= L1; L++) bonus += 50 + 10 * L;
+  let gems = 0;
+  for (let L = L0 + 1; L <= L1; L++) { bonus += 50 + 10 * L; gems += L % 5 ? 1 : 5; }
+  S.gems += gems;
   const got = Math.round(xp / 3) + extraCoins + bonus;
   S.coins += got; save(); renderTop();
   if (L1 > L0) setTimeout(() => {
     sfx.levelup();
     modal(`<div class="big" style="font-size:34px">LEVEL UP</div><div class="av lg" style="margin:0 auto">${S.avatar}</div>
-      <h2>升到 Lv ${L1}！</h2><p class="muted" style="margin:0">升等獎勵 <b style="color:var(--gold)">+${bonus} 金幣</b>，去商店逛逛吧</p>
+      <h2>升到 Lv ${L1}！</h2><p class="muted" style="margin:0">升等獎勵 <b style="color:var(--gold)">+${bonus} 金幣</b>・<b style="color:var(--gem)">+${gems} 寶石</b></p>
       <button class="btn" data-close type="button">太好了</button>`);
+    checkAch();
   }, 600);
   return got;
 }
 function miss(x) { S.wrong[x.id] = (S.wrong[x.id] || 0) + 1; save(); hud(); }
-function hit(x) { if (S.wrong[x.id]) { if (--S.wrong[x.id] <= 0) delete S.wrong[x.id]; save(); hud(); } }
+function hit(x) { S.known[x.id] = 1; if (S.wrong[x.id]) { if (--S.wrong[x.id] <= 0) delete S.wrong[x.id]; save(); hud(); } }
 
 function pool(filter) {
   let p = W.filter(x => S.lessons.includes(x.l));
@@ -151,7 +189,7 @@ function applySkin() { if (S.skin === "default") document.documentElement.remove
 function renderTop() {
   const L = lvOf(S.xp), into = S.xp - (L - 1) * 300;
   $("#meAv").textContent = S.avatar; $("#meName").textContent = S.name; $("#meTitle").textContent = S.title;
-  $("#coins").textContent = S.coins; $("#lv").textContent = L; $("#xp").textContent = S.xp;
+  $("#coins").textContent = S.coins; $("#gems").textContent = S.gems; $("#lv").textContent = L; $("#xp").textContent = S.xp;
   $("#xpNext").textContent = `再 ${300 - into} XP 升 Lv ${L + 1}`; $("#xpFill").style.width = into / 3 + "%";
 }
 function bestText(m) {
@@ -204,6 +242,7 @@ function refreshTab() {
   const O = window.ONLINE;
   if (curTab === "shop") renderShop();
   if (curTab === "me") renderMe();
+  if (curTab === "ach") renderAch();
   if (curTab === "log") { if (S.seenVer !== CHANGELOG[0].v) { S.seenVer = CHANGELOG[0].v; save(); } renderLogDot(); }
   if (curTab === "vs") O ? O.renderVs($("#vsBox")) : $("#vsBox").innerHTML = offline();
   if (curTab === "rank") O ? O.renderRank($("#rankBox")) : $("#rankBox").innerHTML = offline();
@@ -219,22 +258,68 @@ $("#clList").innerHTML = CHANGELOG.map((c, i) => `<div class="cl"><span class="v
   <ul>${c.items.map(t => `<li>${esc(t)}</li>`).join("")}</ul></div>`).join("");
 $("#verText").textContent = `v${CHANGELOG[0].v}`;
 
+/* ---------- 成就 ---------- */
+const today = () => new Date().toLocaleDateString("sv");
+let achQ = [];
+function checkAch() {
+  let n = 0;
+  for (const a of ACH) {
+    if (S.ach[a.id]) continue;
+    const [c, g] = a.p(); if (c < g) continue;
+    S.ach[a.id] = a.id === "welcome" ? S.joined : today(); S.gems += a.gems;
+    if (!owns("title:" + a.title)) S.owned.push("title:" + a.title);
+    achQ.push(a); n++;
+  }
+  if (!n) return;
+  save(); renderTop(); if (curTab === "ach") renderAch();
+  if (achQ.length === n) popAch();
+}
+function popAch() {
+  const a = achQ[0]; if (!a) return;
+  sfx.ding();
+  const el = document.createElement("div"); el.className = "achpop";
+  el.innerHTML = `<span class="trophy" style="color:${TIERS[a.tier][1]}">🏆</span><span><small>成就解鎖・${TIERS[a.tier][0]}</small><b>${esc(a.name)}</b><small>稱號「${esc(a.title)}」・<span style="color:var(--gem)">+${a.gems} 寶石</span></small></span>`;
+  el.onclick = () => showTab("ach");
+  document.body.append(el);
+  setTimeout(() => { el.remove(); achQ.shift(); popAch(); }, 2800);
+}
+function renderAch() {
+  const done = ACH.filter(a => S.ach[a.id]).length;
+  $("#achBox").innerHTML = `<div class="card"><div class="bar"><h2>成就 ${done} / ${ACH.length}</h2><span class="pill gem">寶石 <b>${S.gems}</b></span></div>
+    <p class="muted" style="margin:0">達成條件就自動解鎖，拿到稱號和寶石。寶石可以在商店買稀有頭像和特殊造型。${S.joined ? `你在 <b>${S.joined}</b> 加入遊樂場。` : "用 Google 登入就能拿到「歡迎加入」。"}</p>
+    <div class="xpbar"><i style="width:${done / ACH.length * 100}%"></i></div></div>
+    <div class="achs">${ACH.map(a => {
+      const got = S.ach[a.id], [c, g] = a.p(), t = TIERS[a.tier];
+      return `<div class="ach ${got ? "got" : ""}" style="--tc:${t[1]}">
+        <div class="bar"><span class="trophy">${got ? "🏆" : "🔒"}</span><span class="tier">${t[0]}</span></div>
+        <b>${esc(a.name)}</b><small>${esc(a.desc)}</small>
+        <div class="plate"><span class="av">${S.avatar}</span><span><b>${esc(S.name)}</b><small>${esc(a.title)}</small></span></div>
+        <small>獎勵：稱號「${esc(a.title)}」・<span style="color:var(--gem)">${a.gems} 寶石</span></small>
+        ${got ? `<small class="ok">${a.id === "welcome" ? "加入日期" : "解鎖於"} ${got}</small>`
+          : `<div class="xpbar"><i style="width:${Math.min(1, c / g) * 100}%"></i></div><small>${Math.min(c, g)} / ${g}</small>`}
+      </div>`; }).join("")}</div>`;
+}
+
 /* ---------- 商店 ---------- */
-function buy(k, price, btn) {
-  if (S.coins < price) { sfx.bad(); toast(`金幣不夠，還差 ${price - S.coins}`); return; }
-  armed(btn, `確定花 ${price} 金幣？`, () => { S.coins -= price; S.owned.push(k); save(); sfx.coin(); toast("購買成功！"); hud(); renderShop(); });
+const CUR = { coin: ["金幣", "var(--gold)", "coins"], gem: ["寶石", "var(--gem)", "gems"] };
+function buy(k, price, btn, cur = "coin") {
+  const [label, , field] = CUR[cur];
+  if (S[field] < price) { sfx.bad(); toast(`${label}不夠，還差 ${price - S[field]}`); return; }
+  armed(btn, `確定花 ${price} ${label}？`, () => { S[field] -= price; S.owned.push(k); save(); sfx.coin(); toast("購買成功！"); hud(); renderShop(); });
 }
 function renderShop() {
   const sec = (title, sub, items) => `<div class="card"><div class="bar"><h2>${title}</h2><span class="muted">${sub}</span></div><div class="shop">${items}</div></div>`;
-  const btn = (k, price, on, use) => owns(k)
+  const btn = (k, price, on, use, cur = "coin") => owns(k)
     ? (use ? `<button class="btn small ${on ? "green" : "ghost"}" data-use="${esc(k)}" type="button">${on ? "使用中" : "使用"}</button>` : `<span class="muted">已解鎖</span>`)
-    : `<span class="price">${price} 金幣</span><button class="btn small" data-buy="${esc(k)}" data-p="${price}" type="button">購買</button>`;
-  $("#shopBox").innerHTML = `<div class="card"><div class="bar"><h2>商店</h2><span class="pill coin">金幣 <b>${S.coins}</b></span></div>
-    <p class="muted" style="margin:0">玩一場遊戲約拿 5～25 金幣，升等送 50 + 10×等級，好友對戰贏了 +40。</p></div>` +
+    : `<span class="price" style="color:${CUR[cur][1]}">${price} ${CUR[cur][0]}</span><button class="btn small ${cur === "gem" ? "gemb" : ""}" data-buy="${esc(k)}" data-p="${price}" data-cur="${cur}" type="button">購買</button>`;
+  const skin = s => `<div class="item ${S.skin === s.k ? "on" : ""}"><span class="swatch">${s.sw.map(c => `<i style="background:${c}"></i>`).join("")}</span><b>${s.name}</b><small>${s.desc}</small>${btn("skin:" + s.k, s.price, S.skin === s.k, 1, s.cur)}</div>`;
+  const av = ([a, p, cur]) => `<div class="item ${S.avatar === a ? "on" : ""}"><span class="ico">${a}</span>${btn("av:" + a, p, S.avatar === a, 1, cur)}</div>`;
+  $("#shopBox").innerHTML = `<div class="card"><div class="bar"><h2>商店</h2><span class="row"><span class="pill coin">金幣 <b>${S.coins}</b></span><span class="pill gem">寶石 <b>${S.gems}</b></span></span></div>
+    <p class="muted" style="margin:0">金幣：玩一場約 5～25，升等送 50 + 10×等級，對戰贏 +40。寶石：每升一級 +1、每 5 級 +5，解鎖成就也會給。稱號要靠成就解鎖。</p></div>` +
+    sec("💎 寶石商店", "稀有頭像與特殊造型", SKINS.filter(s => s.cur === "gem").map(skin).join("") + AVATARS.filter(a => a[2] === "gem").map(av).join("")) +
     sec("遊戲", "解鎖新玩法", MODES.filter(o => o.price).map(o => `<div class="item ${owns("game:" + o.m) ? "on" : ""}"><span class="ico" style="font:400 18px var(--f-display);color:var(--hot)">${o.tag}</span><b>${o.name}</b><small>${o.desc}</small>${btn("game:" + o.m, o.price)}</div>`).join("")) +
-    sec("網頁造型", "換整個網站的配色", SKINS.map(s => `<div class="item ${S.skin === s.k ? "on" : ""}"><span class="swatch">${s.sw.map(c => `<i style="background:${c}"></i>`).join("")}</span><b>${s.name}</b><small>${s.desc}</small>${btn("skin:" + s.k, s.price, S.skin === s.k, 1)}</div>`).join("")) +
-    sec("頭像", "顯示在名字旁邊", AVATARS.map(([a, p]) => `<div class="item ${S.avatar === a ? "on" : ""}"><span class="ico">${a}</span>${btn("av:" + a, p, S.avatar === a, 1)}</div>`).join("")) +
-    sec("稱號", "顯示在名字下面", TITLES.map(([t, p]) => `<div class="item ${S.title === t ? "on" : ""}"><b>${t}</b>${btn("title:" + t, p, S.title === t, 1)}</div>`).join(""));
+    sec("網頁造型", "換整個網站的配色", SKINS.filter(s => s.cur !== "gem").map(skin).join("")) +
+    sec("頭像", "顯示在名字旁邊", AVATARS.filter(a => a[2] !== "gem").map(av).join(""));
 }
 function use(k) {
   const [type, v] = [k.slice(0, k.indexOf(":")), k.slice(k.indexOf(":") + 1)];
@@ -245,25 +330,29 @@ function use(k) {
 }
 $("#shopBox").onclick = e => {
   const b = e.target.closest("button"); if (!b) return;
-  if (b.dataset.buy) buy(b.dataset.buy, +b.dataset.p, b);
+  if (b.dataset.buy) buy(b.dataset.buy, +b.dataset.p, b, b.dataset.cur);
   if (b.dataset.use) use(b.dataset.use);
 };
 
 /* ---------- 個人資料 ---------- */
+const myTitles = () => S.owned.filter(k => k.startsWith("title:")).map(k => k.slice(6));
 function renderMe() {
-  const L = lvOf(S.xp);
+  const L = lvOf(S.xp), done = ACH.filter(a => S.ach[a.id]).length;
   $("#meBox").innerHTML = `<div class="card"><div class="row" style="gap:14px"><span class="av lg">${S.avatar}</span>
-      <div style="flex:1;min-width:0"><h2>${esc(S.name)}</h2><span class="muted">${esc(S.title)}・Lv ${L}・XP ${S.xp}・金幣 ${S.coins}</span></div></div>
+      <div style="flex:1;min-width:0"><h2>${esc(S.name)}</h2><span class="muted">${esc(S.title)}・Lv ${L}・XP ${S.xp}・金幣 ${S.coins}・寶石 ${S.gems}</span>
+      <br><span class="muted">${S.joined ? `${S.joined} 加入` : "訪客（尚未登入）"}・成就 ${done}/${ACH.length}</span></div></div>
     <label class="muted" for="nameIn">暱稱（最多 12 字，好友和排行榜會看到）</label>
     <div class="type"><input class="field" id="nameIn" maxlength="12" value="${esc(S.name)}"><button class="btn" id="nameSave" type="button">儲存</button></div></div>
     <div class="card"><h2>頭像</h2><div class="chips">${AVATARS.filter(([a]) => owns("av:" + a)).map(([a]) => `<button class="chip" style="font-size:22px" data-use="av:${a}" aria-pressed="${S.avatar === a}">${a}</button>`).join("")}</div>
-      <h2>稱號</h2><div class="chips">${TITLES.filter(([t]) => owns("title:" + t)).map(([t]) => `<button class="chip" data-use="title:${t}" aria-pressed="${S.title === t}">${t}</button>`).join("")}</div>
+      <h2>稱號</h2><div class="chips">${myTitles().map(t => `<button class="chip" data-use="title:${esc(t)}" aria-pressed="${S.title === t}">${esc(t)}</button>`).join("")}</div>
+      <p class="muted" style="margin:0">稱號靠解鎖成就取得，到「成就」頁看還有哪些。</p>
       <h2>網頁造型</h2><div class="chips">${SKINS.filter(s => owns("skin:" + s.k)).map(s => `<button class="chip" data-use="skin:${s.k}" aria-pressed="${S.skin === s.k}">${s.name}</button>`).join("")}</div>
-      <p class="muted" style="margin:0">更多頭像、稱號和造型在商店買。</p></div>
+      <p class="muted" style="margin:0">更多頭像和造型在商店買。</p></div>
     <div class="card"><h2>我的紀錄</h2><div class="tbl"><table>
       <tr><th>項目</th><th>紀錄</th></tr>
       ${MODES.map(o => `<tr><td>${o.name}</td><td>${owns("game:" + o.m) ? bestText(o.m) : "未解鎖"}</td></tr>`).join("")}
       <tr><td>總遊戲場數</td><td>${S.games}</td></tr><tr><td>好友對戰</td><td>${S.wins} 勝 ${S.losses} 敗</td></tr>
+      <tr><td>答對過的單字</td><td>${knownN()} / ${W.length}</td></tr>
       <tr><td>錯題本</td><td>${Object.keys(S.wrong).length} 個字</td></tr></table></div></div>
     <div class="card" id="accountBox"></div>`;
   window.ONLINE ? window.ONLINE.renderAccount($("#accountBox")) : $("#accountBox").innerHTML = `<h2>帳號</h2><p class="muted">線上功能載入中…</p>`;
@@ -300,7 +389,7 @@ function missedTable(missed) {
 }
 function result(m, bigText, line, missed, xp) {
   if (stopFn) stopFn(); stopFn = null;
-  S.games++; const coins = gain(xp); sfx.win();
+  S.games++; const coins = gain(xp); sfx.win(); checkAch();
   openStage(`${topBar()}
     <div class="big">${bigText}</div>
     <p class="center">${line}<br>獲得 ${xp} XP・<b style="color:var(--gold)">${coins} 金幣</b></p>
@@ -593,6 +682,6 @@ function playListen(P) {
 }
 
 $("#total").textContent = W.length;
-applySkin(); renderChips(); hud(); renderLogDot();
-window.APP = { get S() { return S; }, set S(v) { S = v; }, save, toast, sfx, modal, esc, lvOf, gain, owns, FREE, renderTop, hud, applySkin, renderChips,
+applySkin(); renderChips(); hud(); renderLogDot(); setTimeout(checkAch, 800);
+window.APP = { get S() { return S; }, set S(v) { S = v; }, save, checkAch, toast, sfx, modal, esc, lvOf, gain, owns, FREE, renderTop, hud, applySkin, renderChips,
   refreshTab, showTab, openStage, topBar, home, missedTable, playQuiz, makeVsQuestions, armed, get tab() { return curTab; } };
