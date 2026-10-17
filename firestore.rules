@@ -30,7 +30,8 @@ service cloud.firestore {
     match /rooms/{code} {
       allow read: if request.auth != null;
       allow create: if request.auth != null && request.resource.data.host == request.auth.uid;
-      allow update: if request.auth != null && resource.data.host == request.auth.uid;
+      allow update: if request.auth != null && (resource.data.host == request.auth.uid
+        || (exists(/databases/$(db)/documents/rooms/$(code)/members/$(request.auth.uid)) && !exists(/databases/$(db)/documents/rooms/$(code)/members/$(resource.data.host))));
       match /members/{uid} {
         allow read: if request.auth != null;
         allow create: if request.auth != null && request.auth.uid == uid

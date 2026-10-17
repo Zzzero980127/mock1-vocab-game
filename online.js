@@ -314,6 +314,8 @@ function enterRoom(code) {
     r.members = new Map(s.docs.map(d => [d.id, d.data()]));
     if (r.members.has(user.uid)) r.sawMe = true;
     else if (r.sawMe) return exitRoom("你已被請出房間");
+    if (r.d && r.members.size && !r.members.has(r.d.host) && nextHost(r.members, "")?.[0] === user.uid)   // 房主不告而別（關分頁等）：由最早的成員接手
+      F.updateDoc(r.ref, { host: user.uid, hostName: A.S.name, hostAv: A.S.avatar }).catch(() => {});
     if (r.board) r.board(); else if (A.tab === "vs") renderVs($("#vsBox"));
   }, e => console.error(e));
   if (A.tab === "vs") renderVs($("#vsBox"));
@@ -333,10 +335,14 @@ function exitRoom(msg) {
   if (msg) A.toast(msg);
   if (A.tab === "vs") renderVs($("#vsBox"));
 }
+const nextHost = (members, skip) => [...members].filter(([id]) => id !== skip).sort((a, b) => (a[1].at?.toMillis?.() || 0) - (b[1].at?.toMillis?.() || 0))[0];
 async function leaveRoom() {
   const r = dropRoom(); if (!r) return;
   try {
-    if (r.d?.host === user.uid) await F.updateDoc(r.ref, { status: "closed" });
+    if (r.d?.host === user.uid) {   // 房主離開：轉給最早加入的下一位，沒人了才關房
+      const next = nextHost(r.members, user.uid);
+      await F.updateDoc(r.ref, next ? { host: next[0], hostName: next[1].name, hostAv: next[1].av } : { status: "closed" });
+    }
     await F.deleteDoc(F.doc(r.ref, "members", user.uid));
   } catch (e) { console.error(e); }
   if (A.tab === "vs") renderVs($("#vsBox"));
