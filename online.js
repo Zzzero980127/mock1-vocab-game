@@ -178,6 +178,7 @@ async function removeFriend(fid) {
 }
 
 /* ---------- 房間對戰 ---------- */
+const VS_MODES = { quiz: "快問連擊", hear: "聽音選義", tf: "是非快答", spot: "拼字找碴", blank: "缺字補完", mix: "綜合（每題隨機）" };
 const ROOM_TTL = 30 * 60000;          // 大廳只列出 30 分鐘內開的房間
 let room = null, lobbyRooms = [];     // room = 我所在的房間 { code, ref, d, members, round, inGame, sawMe, closed, unRoom, unMem, board }
 const ROOM_KEY = "mock1-vocab-room";   // 重新整理後自動回到原本的房間
@@ -275,7 +276,7 @@ async function createRoom(o) {
     }
     if (!code) throw new Error("產生房間號失敗，請再試一次");
     const ph = await hashPw(code, o.pw);
-    await F.setDoc(F.doc(db, "rooms", code), { host: user.uid, hostName: S.name, hostAv: S.avatar, name: o.name || `${S.name}的房間`, max: o.max, nq: o.nq,
+    await F.setDoc(F.doc(db, "rooms", code), { host: user.uid, hostName: S.name, hostAv: S.avatar, name: o.name || `${S.name}的房間`, max: o.max, nq: o.nq, mode: o.mode || "quiz",
       lessons: o.lessons, isPublic: o.pub, ph, locked: !!o.pw, status: "waiting", round: 0, qs: [], createdAt: F.serverTimestamp() });
     await F.setDoc(F.doc(db, "rooms", code, "members", user.uid), meInfo(ph));
     A.sfx.tap(); enterRoom(code); return true;
@@ -383,7 +384,7 @@ async function startRoom() {
   const r = room, d = r?.d; if (!d || d.host !== user.uid) return;
   if (r.members.size < 2) return A.toast("至少要 2 個人才能開始");
   if (r.inGame || (d.status !== "waiting" && othersBusy(r))) return A.toast("還有人在作答，等大家打完");
-  try { await F.updateDoc(r.ref, { status: "playing", qs: A.makeVsQuestions(d.nq, d.lessons), round: (d.round || 0) + 1, startedAt: F.serverTimestamp() }); }
+  try { await F.updateDoc(r.ref, { status: "playing", qs: A.makeVsQuestions(d.nq, d.lessons, d.mode || "quiz"), round: (d.round || 0) + 1, startedAt: F.serverTimestamp() }); }
   catch (e) { A.toast("開始失敗：" + (e.code || e.message)); }
 }
 
@@ -477,6 +478,7 @@ function openCreate() {
   const m = A.modal(`<h2 style="margin:0">建立房間</h2>
     <input class="field" id="rnName" maxlength="14" placeholder="房間名稱（可不填）" autocomplete="off">
     <div class="row" style="justify-content:space-between">人數上限<select class="field" id="rnMax" style="flex:0 0 110px">${[2, 3, 4, 5, 6, 8].map(k => `<option value="${k}" ${k === 4 ? "selected" : ""}>${k} 人</option>`).join("")}</select></div>
+    <div class="row" style="justify-content:space-between">遊戲模式<select class="field" id="rnMode" style="flex:0 0 150px">${Object.entries(VS_MODES).map(([k, n]) => `<option value="${k}">${n}</option>`).join("")}</select></div>
     <div class="row" style="justify-content:space-between">題數<select class="field" id="rnNq" style="flex:0 0 110px">${[10, 15, 20].map(k => `<option value="${k}">${k} 題</option>`).join("")}</select></div>
     <div class="row" style="justify-content:space-between"><span><b>單元</b><span class="muted">（可複選）</span></span><span class="row"><button class="btn small ghost" type="button" data-all="1">全選</button><button class="btn small ghost" type="button" data-all="0">全不選</button></span></div>
     <div class="seg" id="rnLs">${A.LESSONS.map(l => `<button class="chip" type="button" data-l="${esc(l)}" aria-pressed="true">${esc(l)}</button>`).join("")}</div>
@@ -497,7 +499,7 @@ function openCreate() {
     if (!ls.length) return A.toast("至少選一個單元");
     if (bookCount(ls) < Math.max(nq, 8)) return A.toast(`選的單元單字太少（只有 ${bookCount(ls)} 個），多選幾個單元或減少題數`);
     ok.disabled = true;
-    const done = await createRoom({ name: m.querySelector("#rnName").value.trim(), max: +m.querySelector("#rnMax").value, nq, lessons: ls,
+    const done = await createRoom({ name: m.querySelector("#rnName").value.trim(), max: +m.querySelector("#rnMax").value, nq, lessons: ls, mode: m.querySelector("#rnMode").value,
       pub: m.querySelector("#rnPub").checked, pw: m.querySelector("#rnPw").value.trim() });
     if (done) m.remove(); else ok.disabled = false;
   });
@@ -522,7 +524,7 @@ function renderRoom(box) {
   box.innerHTML = `
     <div class="card"><div class="bar"><h2>${d.locked ? "🔒 " : ""}${esc(d.name)}</h2><button class="btn small ghost" data-leave type="button">${isHost ? "關閉房間" : "離開房間"}</button></div>
       <div class="row">房間號 <span class="code">${esc(r.code)}</span><button class="btn small ghost" data-copy type="button">複製</button></div>
-      <div class="row"><span class="pill">${d.isPublic ? "公開" : "私人"}</span><span class="pill">${r.members.size}/${d.max} 人</span><span class="pill">${d.nq} 題</span><span class="pill">${esc(lessonText(d))}</span></div></div>
+      <div class="row"><span class="pill">${d.isPublic ? "公開" : "私人"}</span><span class="pill">${r.members.size}/${d.max} 人</span><span class="pill">${esc(VS_MODES[d.mode] || VS_MODES.quiz)}</span><span class="pill">${d.nq} 題</span><span class="pill">${esc(lessonText(d))}</span></div></div>
     <div class="card"><h2>玩家（${r.members.size}/${d.max}）</h2><div class="list">${ms.map(([id, m]) => {
       const fr = friendIds.includes(id), me = id === user.uid;
       return `<div class="person ${me ? "me-row" : ""}"><span class="av">${esc(m.av)}</span><div class="info"><b>${id === d.host ? "👑 " : ""}${esc(m.name)}${me ? "（我）" : ""}</b><small>Lv ${m.lv || 1}${fr ? "・好友" : ""}</small></div>
@@ -559,7 +561,7 @@ function renderVs(box) {
     <div class="card"><div class="bar"><h2>房間大廳</h2><button class="btn" data-create type="button">＋ 建立房間</button></div>
       <p class="muted" style="margin:0">開一間房間，選單元、題數、人數，邀請好友或把房間號給朋友；公開房間會出現在下面讓大家加入。也可以用右下角的框輸入房間號直接加入。</p>
       <div class="list">${lobbyRooms.filter(r => lobbyCnt.get(r.id) !== 0).length ? lobbyRooms.filter(r => lobbyCnt.get(r.id) !== 0).map(r => `<div class="person"><span class="av">${esc(r.hostAv || "🙂")}</span>
-        <div class="info"><b>${r.locked ? "🔒 " : ""}${esc(r.name)}</b><small>房主 ${esc(r.hostName)}・房間號 ${esc(r.id)}・${r.nq} 題・${esc(lessonText(r))}</small></div>
+        <div class="info"><b>${r.locked ? "🔒 " : ""}${esc(r.name)}</b><small>房主 ${esc(r.hostName)}・房間號 ${esc(r.id)}・${esc(VS_MODES[r.mode] || VS_MODES.quiz)}・${r.nq} 題・${esc(lessonText(r))}</small></div>
         <span class="muted" style="white-space:nowrap">${lobbyCnt.get(r.id) ?? "?"}/${r.max}</span><button class="btn small" data-join="${esc(r.id)}" type="button">加入</button></div>`).join("")
         : `<p class="muted">目前沒有公開的房間，自己開一間吧。</p>`}</div></div>
     <div class="card"><div class="bar"><h2>我的好友代碼</h2><span class="code">${esc(me.code || "…")}</span></div>

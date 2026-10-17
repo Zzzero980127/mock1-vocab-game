@@ -7,6 +7,10 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.8.0", date: "2026-10-18", items: [
+    "新增 5 種遊戲：聽音選義、是非快答、記憶翻牌（免費），拼字找碴（80 金幣）、缺字補完（100 金幣）",
+    "建立房間時可以選遊戲模式：快問連擊、聽音選義、是非快答、拼字找碴、缺字補完，或「綜合」每題隨機換一種；房間裡和大廳都會顯示模式"
+  ]},
   { v: "2.7.16", date: "2026-10-17", items: [
     "極光星空：星星改成均勻分佈、彼此保持距離，整個版面都有星星；極光邊緣的階梯狀鋸齒也修掉了"
   ]},
@@ -128,6 +132,11 @@ const MODES = [
   { m: "quiz", tag: "COMBO", name: "快問連擊", desc: "15 題四選一、限時 10 秒，連續答對分數加倍。", price: 0 },
   { m: "spell", tag: "SPELL", name: "拼字工坊", desc: "看中文，用打亂的字母拼出單字，可用鍵盤直接打。", price: 0 },
   { m: "rock", tag: "METEOR", name: "單字隕石", desc: "中文隕石往下掉，打出英文擊碎它。掉到地上要抄一次答案。", price: 100 },
+  { m: "hear", tag: "HEAR", name: "聽音選義", desc: "只聽發音，從四個中文裡選出意思。耳朵練習、不用拼字。", price: 0 },
+  { m: "tf", tag: "TRUE/FALSE", name: "是非快答", desc: "英文配上一個中文，判斷對不對。每題只有 6 秒，反應要快。", price: 0 },
+  { m: "flip", tag: "FLIP", name: "記憶翻牌", desc: "16 張蓋著的牌，翻兩張找出英文和中文的一對，翻越少次越好。", price: 0 },
+  { m: "spot", tag: "SPOT", name: "拼字找碴", desc: "看中文，從四種拼法裡挑出唯一拼對的那個。", price: 80 },
+  { m: "blank", tag: "BLANK", name: "缺字補完", desc: "單字少了一個字母，選出缺的那一個。", price: 100 },
   { m: "listen", tag: "LISTEN", name: "聽音拼字", desc: "只聽發音，把單字打出來。打錯一次給中文提示，再錯就公布答案。", price: 150 },
 ];
 const SKINS = [
@@ -189,7 +198,7 @@ const ACH = [
   { id: "v10", name: "對戰常勝軍", desc: "對戰贏 10 場", title: "對戰常勝軍", gems: 15, tier: 2, p: () => [S.wins || 0, 10] },
 ];
 const TIERS = [["普通", "var(--muted)"], ["稀有", "var(--cool)"], ["史詩", "var(--hot)"], ["傳說", "var(--gold)"], ["開發者", "#ff3fa4"]];
-const FREE = ["game:match", "game:quiz", "game:spell", "skin:default", "av:🙂", "av:🐱", "av:🐶", "title:單字新手"];
+const FREE = ["game:match", "game:quiz", "game:spell", "game:hear", "game:tf", "game:flip", "skin:default", "av:🙂", "av:🐱", "av:🐶", "title:單字新手"];
 
 const lvOf = xp => Math.floor(xp / 300) + 1;
 let S = { xp: 0, wrong: {}, best: {}, lessons: LESSONS.slice(), bank: "book", lvs: [1, 2, 3, 4, 5, 6], wrongOnly: false, autoSay: true, sfx: true,
@@ -637,22 +646,89 @@ function start(m) {
   if (stopFn) stopFn(); stopFn = null;
   const o = MODES.find(x => x.m === m);
   if (!owns("game:" + m)) { showTab("shop"); toast(`「${o.name}」要 ${o.price} 金幣解鎖`); return; }
-  const need = { match: 6, quiz: 4, rock: 3, spell: 3, listen: 3 }[m];
-  const f = m === "rock" || m === "listen" ? typable : m === "spell" ? (x => /^[a-z]{3,12}$/i.test(x.w)) : null;
+  const need = { match: 6, quiz: 4, hear: 4, tf: 4, flip: 8, spot: 6, blank: 6, rock: 3, spell: 3, listen: 3 }[m];
+  const f = m === "rock" || m === "listen" ? typable : m === "spell" ? (x => /^[a-z]{3,12}$/i.test(x.w)) : m === "spot" || m === "blank" ? (x => /^[a-z]{4,12}$/i.test(x.w)) : null;
   if (pool(f).length < need) { toast(S.wrongOnly ? "錯題本的字太少，先關掉「只練錯題本」" : "選的範圍單字太少，多選幾個課次或級別"); home(); return; }
-  ({ match: playMatch, quiz: playQuiz, rock: playRock, spell: playSpell, listen: playListen })[m](pool(f));
+  if (["quiz", "hear", "tf", "spot", "blank"].includes(m)) return playQuiz(pool(f), null, m);
+  ({ match: playMatch, flip: playFlip, rock: playRock, spell: playSpell, listen: playListen })[m](pool(f));
 }
 $("#menu").onclick = e => { const b = e.target.closest(".mode"); if (b) start(b.dataset.m); };
 
-// 好友對戰的題目：兩邊用同一組題目與選項
-function makeVsQuestions(n = 10, lessons) {
+// 題目產生：quiz 四選一、hear 聽音選中文、tf 是非、spot 拼字找碴、blank 缺字；mix 每題隨機一種。
+// vs 房間與單人共用，題目都是純資料（id、選項），所以所有人看到一模一樣的題目。
+const MC_KINDS = ["quiz", "hear", "tf", "spot", "blank"];
+const MC_TIME = { tf: 6000 };
+const VOW = "aeiou", CON = "bcdfghjklmnpqrstvwxyz";
+function misspell(w) {
+  const a = w.toLowerCase().split(""), out = new Set(), n = a.length;
+  const tries = [
+    () => { const i = 1 + Math.random() * (n - 2) | 0, b = a.slice(); [b[i], b[i + 1]] = [b[i + 1], b[i]]; return b.join(""); },
+    () => { const i = Math.random() * n | 0, b = a.slice(); b.splice(i, 1); return b.join(""); },
+    () => { const i = Math.random() * n | 0, b = a.slice(); b.splice(i, 0, b[i]); return b.join(""); },
+    () => { const v = a.map((c, i) => VOW.includes(c) ? i : -1).filter(i => i >= 0); if (!v.length) return w; const i = v[Math.random() * v.length | 0], b = a.slice(); b[i] = shuffle(VOW.split("").filter(c => c !== a[i]))[0]; return b.join(""); },
+    () => { const v = a.map((c, i) => CON.includes(c) && i > 0 ? i : -1).filter(i => i >= 0); if (!v.length) return w; const i = v[Math.random() * v.length | 0], b = a.slice(); b[i] = shuffle(CON.split("").filter(c => c !== a[i]))[0]; return b.join(""); },
+  ];
+  for (let t = 0; t < 40 && out.size < 3; t++) { const r = tries[Math.random() * tries.length | 0](); if (r !== w.toLowerCase() && r.length >= 3) out.add(w[0] === w[0].toUpperCase() ? r[0].toUpperCase() + r.slice(1) : r); }
+  return [...out];
+}
+function mkQ(kind, x, dist) {
+  let k = kind;
+  if (k === "mix") k = MC_KINDS[Math.random() * MC_KINDS.length | 0];
+  const wordOk = /^[a-z]{4,12}$/i.test(x.w);
+  if ((k === "spot" || k === "blank") && !wordOk) k = "quiz";
+  const enQ = k === "hear" ? true : Math.random() < .5;
+  if (k === "tf") {
+    const t = Math.random() < .5 ? x : pick(dist.filter(y => y.c !== x.c && y.w !== x.w), 1, ["c"])[0];
+    return { k, id: x.id, t: t.id };
+  }
+  if (k === "spot") {
+    const f = misspell(x.w); if (f.length < 3) return mkQ("quiz", x, dist);
+    const o = shuffle([x.w, ...f]); return { k, id: x.id, o, a: o.indexOf(x.w) };
+  }
+  if (k === "blank") {
+    const w = x.w.toLowerCase(), i = 1 + Math.random() * (w.length - 1) | 0, ch = w[i], pool = (VOW.includes(ch) ? VOW : CON).split("").filter(c => c !== ch);
+    const o = shuffle([ch, ...shuffle(pool).slice(0, 3)]); return { k, id: x.id, b: i, o, a: o.indexOf(ch) };
+  }
+  const others = pick(dist.filter(y => y.c !== x.c && y.w !== x.w), 3, [enQ ? "c" : "w"]);
+  return { k, id: x.id, enQ, o: shuffle([x, ...others]).map(y => y.id) };
+}
+function makeQs(kind, items, dist, n) { return pick(items, Math.min(n, items.length), ["w"], true).map(x => mkQ(kind, x, dist)); }
+function makeVsQuestions(n = 10, lessons, kind = "quiz") {
   const BW = W.filter(x => !x.b);   // 好友對戰固定用課本單字；lessons=房主選的單元
   const src = lessons?.length ? BW.filter(x => lessons.includes(x.l)) : BW;
-  return pick(src, Math.min(n, src.length), ["w"]).map(x => {
-    const enQ = Math.random() < .5;
-    const others = pick(BW.filter(y => y.c !== x.c && y.w !== x.w), 3, [enQ ? "c" : "w"]);
-    return { id: x.id, enQ, o: shuffle([x, ...others]).map(y => y.id) };
-  });
+  return makeQs(kind, src, BW, n);
+}
+
+/* ---------- 記憶翻牌 ---------- */
+function playFlip(P) {
+  const set = pick(P, 8, ["w", "c"], true);
+  const cards = shuffle(set.flatMap(x => [{ x, t: "en", s: x.w }, { x, t: "zh", s: x.c }]));
+  openStage(`${topBar("", `<span class="pill">時間 <b id="tm">0.0</b></span><span class="pill">翻牌 <b id="fl">0</b></span>`)}
+    <p class="center" style="margin:0">翻開兩張，英文和中文是一對就留著</p>
+    <div class="grid flipgrid">${cards.map((o, i) => `<button class="tile flipc" data-i="${i}" aria-label="蓋著的牌">？</button>`).join("")}</div>`);
+  const t0 = performance.now(); let flips = 0, left = 8, open = [], busy = false; const missed = [], seen = new Set();
+  const iv = setInterval(() => $("#tm").textContent = ((performance.now() - t0) / 1000).toFixed(1), 100);
+  stopFn = () => { clearInterval(iv); clearTimeout(tm); }; let tm = 0;
+  stage.querySelector(".grid").onclick = e => {
+    const b = e.target.closest(".flipc"); if (!b || busy || b.classList.contains("done") || open.includes(b)) return;
+    const o = cards[b.dataset.i]; b.textContent = o.s; b.classList.add("sel", o.t); if (o.t === "en") sayIf(o.x.w); sfx.tap();
+    open.push(b); if (open.length < 2) return;
+    flips++; $("#fl").textContent = flips; busy = true;
+    const [a, c] = open.map(el => cards[el.dataset.i]);
+    if (a.x === c.x && a.t !== c.t) {
+      open.forEach(el => { el.classList.remove("sel"); el.classList.add("done"); }); open = []; busy = false; sfx.ok(); hit(a.x);
+      if (--left === 0) {
+        clearInterval(iv); const t = (performance.now() - t0) / 1000, score = Math.max(0, Math.round(500 - t * 4 - Math.max(0, flips - 8) * 12));
+        const best = !S.best.flip || score > S.best.flip; if (best) S.best.flip = score; recFull("flip", score);
+        result("flip", score, `${t.toFixed(1)} 秒・翻了 ${flips} 次${best ? "・新紀錄！" : ""}`, missed, 20 + Math.round(score / 20));
+      }
+    } else {
+      sfx.bad();
+      for (const z of [a, c]) if (seen.has(z.x) && !missed.includes(z.x)) { miss(z.x); missed.push(z.x); }   // 看過還翻錯 = 沒記住
+      [a, c].forEach(z => seen.add(z.x));
+      tm = setTimeout(() => { open.forEach(el => { el.textContent = "？"; el.classList.remove("sel", "en", "zh"); }); open = []; busy = false; }, 900);
+    }
+  };
 }
 
 /* ---------- 配對消除 ---------- */
@@ -690,8 +766,8 @@ function playMatch(P) {
 
 
 /* ---------- 快問連擊（好友對戰也用這個，vs 帶入固定題目與回呼） ---------- */
-function playQuiz(P, vs) {
-  const qs = vs ? vs.qs.map(q => W[q.id]) : pick(P, Math.min(15, P.length), ["w"], true);
+function playQuiz(P, vs, kind = "quiz") {
+  const Q = vs ? vs.qs : makeQs(kind, P, uni(), kind === "tf" ? 20 : 15), qs = Q.map(q => W[q.id]);
   let i = 0, score = 0, combo = 0, right = 0, raf = 0, locked = false, dead = false; const missed = [];
   openStage(`${topBar("", `<span class="pill">題 <b id="qn">1</b>/${qs.length}</span><span class="pill">分數 <b id="sc">0</b></span>`)}
     ${vs ? `<div class="vsboard" id="vsb"></div>` : ""}
@@ -709,36 +785,49 @@ function playQuiz(P, vs) {
     if (dead) return;
     if (i >= qs.length) {
       if (vs) { dead = true; cancelAnimationFrame(raf); document.removeEventListener("keydown", key); stopFn = null; return vs.onEnd(score, right, missed); }
-      const best = !S.best.quiz || score > S.best.quiz; if (best) S.best.quiz = score;
-      recFull("quiz", score);
-      return result("quiz", score, `答對 ${right}/${qs.length}${best ? "・新紀錄！" : ""}`, missed, right * 4);
+      const best = !S.best[kind] || score > S.best[kind]; if (best) S.best[kind] = score;
+      recFull(kind, score);
+      return result(kind, score, `答對 ${right}/${qs.length}${best ? "・新紀錄！" : ""}`, missed, right * 4);
     }
-    const x = qs[i], enQ = vs ? vs.qs[i].enQ : Math.random() < .5; locked = false;
-    const opts = vs ? vs.qs[i].o.map(id => W[id]) : shuffle([x, ...pick((vs ? W : uni()).filter(y => y.c !== x.c && y.w !== x.w), 3, [enQ ? "c" : "w"])]);
+    const x = qs[i], q = Q[i], k = q.k || "quiz", enQ = !!q.enQ; locked = false;
+    let texts, cls = "en", okI, spoken = enQ, ph;
+    if (k === "quiz" || k === "hear") {
+      const opts = q.o.map(id => W[id]); texts = opts.map(o => enQ ? o.c : o.w); cls = enQ ? "" : "en"; okI = opts.indexOf(x);
+      ph = k === "hear" ? `<span style="font-size:44px">🔊</span><small>聽發音，選出中文意思</small><span style="display:block;margin-top:8px">${replayBtn()}</span>`
+        : enQ ? `${esc(x.w)}<small>${esc(pos(x))}</small><span style="display:block;margin-top:8px">${replayBtn()}</span>` : `${esc(x.c)}<small>${esc(pos(x))}</small>`;
+    } else if (k === "tf") {
+      const y = W[q.t]; texts = ["✔ 對", "✘ 錯"]; cls = ""; okI = q.t === q.id ? 0 : 1; spoken = true;
+      ph = `${esc(x.w)}<small>${esc(pos(x))}</small><span style="display:block;margin:6px 0;font-size:.8em">＝ ${esc(y.c)} ？</span><span style="display:block">${replayBtn()}</span>`;
+    } else if (k === "spot") {
+      texts = q.o; okI = q.a; ph = `${esc(x.c)}<small>${esc(pos(x))}・選出拼對的</small>`;
+    } else {
+      texts = q.o; okI = q.a; const w = x.w.toLowerCase();
+      ph = `${esc(x.c)}<small>${esc(pos(x))}・缺了哪一個字母？</small><span style="display:block;margin-top:6px;font-family:var(--f-mono);letter-spacing:.12em">${esc(w.slice(0, q.b))}<u style="padding:0 .3em">&nbsp;?&nbsp;</u>${esc(w.slice(q.b + 1))}</span>`;
+    }
     $("#qn").textContent = i + 1;
-    $("#q").className = "q" + (enQ ? " en" : "");
-    $("#q").innerHTML = enQ ? `${esc(x.w)}<small>${esc(pos(x))}</small><span style="display:block;margin-top:8px">${replayBtn()}</span>` : `${esc(x.c)}<small>${esc(pos(x))}</small>`;
-    replayFn = enQ ? () => speak(x.w) : null;
-    if (enQ) $("#replay").onclick = replayFn;
-    $("#opts").innerHTML = opts.map((o, k) => `<button class="opt ${enQ ? "" : "en"}" data-k="${k}"><kbd>${k + 1}</kbd>${esc(enQ ? o.c : o.w)}</button>`).join("");
-    if (enQ) sayIf(x.w);
-    const t0 = performance.now(), T = 10000;
+    $("#q").className = "q" + (k === "quiz" && !enQ || k === "hear" ? "" : " en");
+    $("#q").innerHTML = ph;
+    replayFn = spoken ? () => speak(x.w) : null;
+    if (spoken) $("#replay").onclick = replayFn;
+    $("#opts").innerHTML = texts.map((t, j) => `<button class="opt ${cls}" data-k="${j}"><kbd>${j + 1}</kbd>${esc(t)}</button>`).join("");
+    if (k === "hear" || k === "tf") speak(x.w); else if (enQ) sayIf(x.w);
+    const t0 = performance.now(), T = MC_TIME[k] || 10000;
     let beep = 3;
     const tick = () => { const r = 1 - (performance.now() - t0) / T; if (r * 10 < beep && beep > 0) { beep--; sfx.warn(); } $("#tbar").style.width = Math.max(0, r) * 100 + "%"; if (r <= 0) answer(-1, 0); else raf = requestAnimationFrame(tick); };
     raf = requestAnimationFrame(tick);
     $("#opts").onclick = e => { const b = e.target.closest(".opt"); if (b) answer(+b.dataset.k, 1 - (performance.now() - t0) / T); };
-    function answer(k, r) {
+    function answer(kk, r) {
       if (locked) return; locked = true; cancelAnimationFrame(raf);
-      const btns = stage.querySelectorAll(".opt"), ok = k >= 0 && opts[k] === x;
-      btns[opts.indexOf(x)].classList.add("ok");
+      const btns = stage.querySelectorAll(".opt"), ok = kk >= 0 && kk === okI;
+      btns[okI].classList.add("ok");
       if (ok) {
-        combo++; right++; hit(x); if (!enQ) sayIf(x.w); combo >= 3 ? sfx.combo(combo) : sfx.ok();
+        combo++; right++; hit(x); if (!spoken) sayIf(x.w); combo >= 3 ? sfx.combo(combo) : sfx.ok();
         const mul = Math.min(3, 1 + Math.floor(combo / 3) * .5);
         score += Math.round((100 + r * 100) * mul);
         $("#cb").textContent = combo >= 3 ? `${combo} 連擊 ×${mul}` : "";
       } else {
-        if (k >= 0) btns[k].classList.add("no");
-        combo = 0; miss(x); missed.push(x); sfx.bad(); $("#cb").textContent = k < 0 ? "時間到" : "";
+        if (kk >= 0) btns[kk].classList.add("no");
+        combo = 0; miss(x); missed.push(x); sfx.bad(); $("#cb").textContent = kk < 0 ? "時間到" : "";
       }
       $("#sc").textContent = score; i++;
       if (vs) vs.onAnswer(i, score);
