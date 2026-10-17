@@ -473,6 +473,8 @@ function renderLogDot() {
 $("#clList").innerHTML = CHANGELOG.map((c, i) => `<div class="cl"><span class="v">v${c.v}</span> <span class="muted">${c.date}</span>${i === 0 ? '<span class="new">最新</span>' : ""}
   <ul>${c.items.map(t => `<li>${esc(t)}</li>`).join("")}</ul></div>`).join("");
 $("#verText")?.replaceChildren(`v${CHANGELOG[0].v}`);
+const DEV = (() => { try { const s = location.search; if (/[?&]dev=0/.test(s)) localStorage.removeItem("quizDev"); else if (/[?&]dev(=1)?(&|$)/.test(s)) localStorage.setItem("quizDev", "1"); return localStorage.getItem("quizDev") === "1"; } catch (e) { return false; } })();
+if (!DEV) { $("#logTab")?.remove(); $("#tab-log")?.remove(); $("#verText")?.remove(); }
 
 /* ---------- 成就 ---------- */
 const today = () => new Date().toLocaleDateString("sv");
