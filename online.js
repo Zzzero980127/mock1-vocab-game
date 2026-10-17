@@ -206,7 +206,7 @@ function listenInvites() {
     });
     snap.docChanges().forEach(c => { if (c.type === "added" && invites.has(c.doc.id)) A.sfx.ding(); });
     renderInvites();
-  }, e => console.error(e)));
+  }, e => { console.error(e); A.toast("收不到對戰邀請：" + (e.code || e.message)); }));
 }
 function renderInvites() {
   document.querySelectorAll(".invite").forEach(x => x.remove());

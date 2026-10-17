@@ -18,7 +18,7 @@ service cloud.firestore {
     }
     // 對戰：只有對戰雙方能讀寫
     match /matches/{id} {
-      allow read, update: if request.auth != null && request.auth.uid in [resource.data.a, resource.data.b];
+      allow read, update: if request.auth != null && (resource.data.a == request.auth.uid || resource.data.b == request.auth.uid);
       allow create: if request.auth != null && request.resource.data.a == request.auth.uid;
     }
   }
