@@ -11,7 +11,7 @@ const CHANGELOG = [
     "輸入框裡重聽發音的快捷鍵改成數字 1（Ctrl+空白、Tab 都會被系統搶走，已移除）；Alt+R 仍可用"
   ]},
   { v: "2.7.5", date: "2026-10-17", items: [
-    "拼字工坊多了「🔊 聽發音」按鈕（不扣分，可重複聽），每題開始也會自動唸一次（跟著「自動發音」設定）"
+    "拼字工坊多了「🔊 聽發音」按鈕（不扣分，可重複聽），每題開始也會自動唸一次（跟著「自動發音」設定）；快捷鍵數字 1 可以重聽"
   ]},
   { v: "2.7.4", date: "2026-10-17", items: [
     "拼字工坊「提示一個字母」現在按下去就直接扣 10 分（分數可以變負的），不能再免費狂按"
@@ -234,7 +234,7 @@ let replayFn = null;   // 目前題目的「再聽一次」
 const replayBtn = (id = "replay") => `<button class="btn ghost small" id="${id}" type="button" title="快捷鍵 R（輸入框裡用數字 1 或 Alt+R）">🔊 再聽一次 <kbd>R</kbd></button>`;
 document.addEventListener("keydown", e => {
   if (!replayFn || e.repeat) return;
-  const typing = e.target.matches?.("input, textarea");
+  const typing = replayFn.digit || e.target.matches?.("input, textarea");
   const hot = typing ? e.code === "Digit1" || e.code === "Numpad1" || e.key === "1" || (e.altKey && e.code === "KeyR")
     : (e.code === "KeyR" && !e.ctrlKey && !e.altKey && !e.metaKey);
   if (hot) { e.preventDefault(); replayFn(); }
@@ -706,7 +706,7 @@ function playSpell(P) {
   openStage(`${topBar("", `<span class="pill">題 <b id="qn">1</b>/${qs.length}</span><span class="pill">分數 <b id="sc">0</b></span>`)}
     <div class="q" id="q"></div><div class="slots" id="sl"></div><div class="letters" id="lt"></div>
     <div class="msg" id="msg"></div>
-    <div class="bar" style="justify-content:center"><button class="btn ghost" id="sayB" type="button">🔊 聽發音</button><button class="btn ghost" id="hintB" type="button">提示一個字母（−10）</button><button class="btn ghost" id="skipB" type="button">看答案</button></div>`);
+    <div class="bar" style="justify-content:center"><button class="btn ghost" id="sayB" type="button">🔊 聽發音 <kbd>1</kbd></button><button class="btn ghost" id="hintB" type="button">提示一個字母（−10）</button><button class="btn ghost" id="skipB" type="button">看答案</button></div>`);
   let x, ans, letters, slots, hints, tries, done, dead = false;
   function key(e) {
     if (done) return;
@@ -759,6 +759,7 @@ function playSpell(P) {
   $("#lt").onclick = e => { const b = e.target.closest(".let"); if (b && !done) put(+b.dataset.k); };
   $("#sl").onclick = e => { const b = e.target.closest(".slot"); if (b && !done) undo(+b.dataset.j); };
   $("#sayB").onclick = () => { if (!done) speak(x.w); };
+  replayFn = () => { if (!done) speak(x.w); }; replayFn.digit = true;   // 拼字時 R 是字母，所以重聽用數字 1
   $("#hintB").onclick = () => {
     if (done) return;
     // 把錯位的字母全部收回，填入下一個正確字母
