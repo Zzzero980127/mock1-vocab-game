@@ -7,6 +7,9 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.7.14", date: "2026-10-17", items: [
+    "極光省效能：限 30 幀、降低繪製解析度、減少星星數量，風扇不會再狂轉"
+  ]},
   { v: "2.7.13", date: "2026-10-17", items: [
     "極光上下起伏的幅度縮小，簾幕更平穩"
   ]},
@@ -320,18 +323,21 @@ function auroraCanvas(on) {
     mk([[0, "rgba(90,255,170,0)"], [.6, "rgba(90,255,170,.3)"], [.93, "rgba(210,255,170,.8)"], [1, "rgba(210,255,170,0)"]]),
   ];
   let stars = [];
-  const initStars = () => { const W = cv.width, H = cv.height, D = Math.hypot(W, H); stars = Array.from({ length: 260 }, () => ({ r: D * (.08 + Math.random() * .95), a: Math.random() * 6.283, l: .12 + Math.random() * .3, b: .35 + Math.random() * .65, w: Math.random() * 6 })); };
+  const initStars = () => { const W = cv.width, H = cv.height, D = Math.hypot(W, H); stars = Array.from({ length: 120 }, () => ({ r: D * (.08 + Math.random() * .95), a: Math.random() * 6.283, l: .12 + Math.random() * .3, b: .35 + Math.random() * .65, w: Math.random() * 6 })); };
   const still = matchMedia("(prefers-reduced-motion:reduce)").matches;
-  const size = () => { cv.width = Math.ceil(innerWidth / 2); cv.height = Math.ceil(innerHeight / 2); initStars(); };
+  const size = () => { cv.width = Math.ceil(innerWidth / 3); cv.height = Math.ceil(innerHeight / 3); initStars(); };
   size(); addEventListener("resize", size);
+  let last = 0;
   const draw = ms => {
+    if (!still && ms - last < 33) { auroraRaf = requestAnimationFrame(draw); return; }   // 限 30fps 省電
+    last = ms;
     if (document.documentElement.dataset.skin !== "aurora") { auroraCanvas(false); return; }
     const t = ms / 1000 * .6, W = cv.width, H = cv.height;
     ctx.clearRect(0, 0, W, H);
     const px = W * .58, py = H * 1.05, rot = ms / 1000 * .035;   // 星軌：繞著天極緩慢旋轉的弧線
     ctx.lineCap = "round"; ctx.lineWidth = Math.max(1, W / 900);
     stars.forEach(s => {
-      const a1 = s.a + rot, tw = .75 + .25 * Math.sin(ms / 700 + s.w), N = 5;
+      const a1 = s.a + rot, tw = .75 + .25 * Math.sin(ms / 700 + s.w), N = 3;
       for (let i = 0; i < N; i++) {
         const u0 = a1 - s.l * (1 - i / N), u1 = a1 - s.l * (1 - (i + 1) / N);
         const x0 = px + s.r * Math.cos(u0), y0 = py + s.r * Math.sin(u0), x1 = px + s.r * Math.cos(u1), y1 = py + s.r * Math.sin(u1);
@@ -343,12 +349,12 @@ function auroraCanvas(on) {
     ctx.globalCompositeOperation = "lighter";
     strips.forEach((st, k) => {
       const base = [.42, .55, .32][k], ph = k * 2.1;
-      for (let x = 0; x < W; x++) {
+      for (let x = 0; x < W; x += 2) {
         const y = H * (base + .04 * Math.sin(x * .016 + t * .5 + ph) + .025 * Math.sin(x * .037 - t * .8 + ph) + .01 * Math.sin(x * .045 + t * 1.2));
         const h = H * (.3 + .05 * Math.sin(x * .02 + t * .4 + ph * 2) + .03 * Math.sin(x * .035 - t * .8));
         let a = .6 + .4 * Math.sin(x * .02 + t * 1.2 + ph) * Math.sin(x * .011 - t * .5 + ph);
         ctx.globalAlpha = Math.max(0, Math.min(1, a)) * .85;
-        ctx.drawImage(st, 0, 0, 1, 64, x, y - h, 1, h);
+        ctx.drawImage(st, 0, 0, 1, 64, x, y - h, 2, h);
       }
     });
     ctx.globalAlpha = 1;
