@@ -193,10 +193,15 @@ async function hashPw(code, pw) {
 }
 const meInfo = ph => ({ name: A.S.name, av: A.S.avatar, lv: A.lvOf(A.S.xp), ph, r: -1, p: 0, s: 0, at: F.serverTimestamp() });
 
+const lobbyUn = new Map(), lobbyCnt = new Map();
 function listenLobby() {
+  unsubs.push(() => { lobbyUn.forEach(u => u()); lobbyUn.clear(); lobbyCnt.clear(); });
   const q = F.query(F.collection(db, "rooms"), F.where("isPublic", "==", true), F.where("status", "==", "waiting"));
   unsubs.push(F.onSnapshot(q, snap => {
     lobbyRooms = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(r => Date.now() - nowMs(r) < ROOM_TTL).sort((a, b) => nowMs(b) - nowMs(a));
+    const ids = new Set(lobbyRooms.map(r => r.id));   // 每間公開房間各聽一份成員數，大廳才能顯示「目前人數/上限」，沒人的房間不列出
+    for (const [id, un] of lobbyUn) if (!ids.has(id)) { un(); lobbyUn.delete(id); lobbyCnt.delete(id); }
+    for (const id of ids) if (!lobbyUn.has(id)) lobbyUn.set(id, F.onSnapshot(F.collection(db, "rooms", id, "members"), m => { lobbyCnt.set(id, m.size); if (!room) softRender(); }, () => {}));
     if (!room) softRender();
   }, e => { console.error(e); A.toast("讀取房間列表失敗：" + (e.code || e.message)); }));
 }
@@ -553,9 +558,9 @@ function renderVs(box) {
   box.innerHTML = `
     <div class="card"><div class="bar"><h2>房間大廳</h2><button class="btn" data-create type="button">＋ 建立房間</button></div>
       <p class="muted" style="margin:0">開一間房間，選單元、題數、人數，邀請好友或把房間號給朋友；公開房間會出現在下面讓大家加入。也可以用右下角的框輸入房間號直接加入。</p>
-      <div class="list">${lobbyRooms.length ? lobbyRooms.map(r => `<div class="person"><span class="av">${esc(r.hostAv || "🙂")}</span>
-        <div class="info"><b>${r.locked ? "🔒 " : ""}${esc(r.name)}</b><small>房主 ${esc(r.hostName)}・房間號 ${esc(r.id)}・最多 ${r.max} 人・${r.nq} 題・${esc(lessonText(r))}</small></div>
-        <button class="btn small" data-join="${esc(r.id)}" type="button">加入</button></div>`).join("")
+      <div class="list">${lobbyRooms.filter(r => lobbyCnt.get(r.id) !== 0).length ? lobbyRooms.filter(r => lobbyCnt.get(r.id) !== 0).map(r => `<div class="person"><span class="av">${esc(r.hostAv || "🙂")}</span>
+        <div class="info"><b>${r.locked ? "🔒 " : ""}${esc(r.name)}</b><small>房主 ${esc(r.hostName)}・房間號 ${esc(r.id)}・${r.nq} 題・${esc(lessonText(r))}</small></div>
+        <span class="muted" style="white-space:nowrap">${lobbyCnt.get(r.id) ?? "?"}/${r.max}</span><button class="btn small" data-join="${esc(r.id)}" type="button">加入</button></div>`).join("")
         : `<p class="muted">目前沒有公開的房間，自己開一間吧。</p>`}</div></div>
     <div class="card"><div class="bar"><h2>我的好友代碼</h2><span class="code">${esc(me.code || "…")}</span></div>
       <p class="muted" style="margin:0">把代碼給朋友，或輸入朋友的代碼送出好友申請。在房間裡遇到沒加過的人，也可以按「加好友」，對方同意才會成為好友。</p>
