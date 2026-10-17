@@ -228,13 +228,13 @@ async function answerReq(id, yes) {
   } catch (e) { A.toast("操作失敗：" + (e.code || e.message)); }
 }
 async function sendRequest(fid) {
-  if (friendIds.includes(fid)) return A.toast("你們已經是好友了");
-  if (reqs.has(fid)) return answerReq(fid, true);   // 對方也正好申請我，直接成為好友
+  if (friendIds.includes(fid)) { A.toast("你們已經是好友了"); return true; }
+  if (reqs.has(fid)) return answerReq(fid, true).then(() => true);   // 對方也正好申請我，直接成為好友
   try {
     const S = A.S;
     await F.setDoc(F.doc(db, "users", fid, "requests", user.uid), { from: user.uid, fromName: S.name, fromAv: S.avatar, lv: A.lvOf(S.xp), createdAt: F.serverTimestamp() });
-    A.sfx.tap(); A.toast("已送出好友申請");
-  } catch (e) { A.toast("送出申請失敗：" + (e.code || e.message)); }
+    A.sfx.tap(); A.toast("已送出好友申請"); return true;
+  } catch (e) { console.error(e); A.toast("送出申請失敗：" + (e.code || e.message) + (e.code === "permission-denied" ? "（Firebase 規則還沒更新）" : "")); return false; }
 }
 function renderInvites() {
   document.querySelectorAll(".invite").forEach(x => x.remove());
@@ -533,7 +533,7 @@ function renderRoom(box) {
     if (b.dataset.leave !== undefined) A.armed(b, "確定？", leaveRoom);
     if (b.dataset.copy !== undefined) navigator.clipboard?.writeText(r.code).then(() => A.toast("已複製房間號"), () => A.toast("房間號是 " + r.code));
     if (b.dataset.start !== undefined) startRoom();
-    if (b.dataset.befriend) { sendRequest(b.dataset.befriend); b.disabled = true; b.textContent = "已申請"; }
+    if (b.dataset.befriend) { b.disabled = true; b.textContent = "送出中…"; sendRequest(b.dataset.befriend).then(ok => { b.textContent = ok ? "已申請" : "加好友"; b.disabled = !!ok; }); }
     if (b.dataset.kick) A.armed(b, "確定？", () => kickMember(b.dataset.kick));
     if (b.dataset.invite) { inviteFriend(b.dataset.invite); b.disabled = true; b.textContent = "已邀請"; }
   };
