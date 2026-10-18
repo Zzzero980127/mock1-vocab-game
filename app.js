@@ -7,6 +7,11 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.9.0", date: "2026-10-18", items: [
+    "新增「一模全字挑戰」：課本 336 字一次考完，每字一題（不受課次、字庫設定影響）",
+    "「一模滿分腦」改成傳說成就：在全字挑戰一次 336 題全對才拿得到；原本的「90% 熟練度」改名「一模熟讀者」，升為神話級（新增神話稀有度）",
+    "已經拿過舊版「一模滿分腦」的人，稱號和寶石保留；熟練度達標的會另外拿到「一模熟讀者」"
+  ]},
   { v: "2.8.1", date: "2026-10-18", items: [
     "題庫區新增「題數」選單（標準／5／10／20／30／50 題），適用快問連擊、聽音選義、是非快答、拼字找碴、缺字補完、拼字工坊、聽音拼字；題數多分數自然高、題數少分數自然低",
     "自訂題數時不會更新成就用的全範圍紀錄，避免用短場次或長場次刷成就"
@@ -141,6 +146,7 @@ const MODES = [
   { m: "flip", tag: "FLIP", name: "記憶翻牌", desc: "16 張蓋著的牌，翻兩張找出英文和中文的一對，翻越少次越好。", price: 0 },
   { m: "spot", tag: "SPOT", name: "拼字找碴", desc: "看中文，從四種拼法裡挑出唯一拼對的那個。", price: 80 },
   { m: "blank", tag: "BLANK", name: "缺字補完", desc: "單字少了一個字母，選出缺的那一個。", price: 100 },
+  { m: "all", tag: "ALL 336", name: "一模全字挑戰", desc: "課本 336 字一次考完，每字一題。全部答對解鎖最高成就「一模滿分腦」。", price: 0 },
   { m: "listen", tag: "LISTEN", name: "聽音拼字", desc: "只聽發音，把單字打出來。打錯一次給中文提示，再錯就公布答案。", price: 150 },
 ];
 const SKINS = [
@@ -171,7 +177,7 @@ function mastery(k) {
 const masteryP = (k, th) => () => { const m = mastery(k); return [m.seen >= m.total && m.acc >= th ? m.total : Math.min(m.seen, m.total - 1), m.total]; };
 const masteryNote = k => () => { const m = mastery(k); return `已測 ${m.seen}/${m.total} 字・首答正確率 ${(m.acc * 100).toFixed(1)}%`; };
 const ACH = [
-  { id: "dev", name: "遊戲設計者", desc: "親手打造了這座單字遊樂場", title: "遊戲設計者", gems: 50, tier: 4, hidden: true, icon: "⚡", p: () => [isMeDev() ? 1 : 0, 1] },
+  { id: "dev", name: "遊戲設計者", desc: "親手打造了這座單字遊樂場", title: "遊戲設計者", gems: 50, tier: 5, hidden: true, icon: "⚡", p: () => [isMeDev() ? 1 : 0, 1] },
   { id: "welcome", name: "歡迎加入", desc: "登入遊樂場（Google 或遊客）", title: "新進玩家", gems: 5, tier: 0, p: () => [S.joined ? 1 : 0, 1] },
   { id: "g10", name: "小試身手", desc: "玩 10 場遊戲", title: "熱身完畢", gems: 2, tier: 0, p: () => [S.games, 10] },
   { id: "g50", name: "遊樂場常客", desc: "玩 50 場遊戲", title: "遊樂場常客", gems: 5, tier: 1, p: () => [S.games, 50] },
@@ -180,29 +186,30 @@ const ACH = [
   { id: "lv10", name: "十全十美", desc: "升到 Lv 10", title: "十級玩家", gems: 8, tier: 1, p: () => [lvOf(S.xp), 10] },
   { id: "lv20", name: "一模霸主", desc: "升到 Lv 20", title: "一模霸主", gems: 20, tier: 2, p: () => [lvOf(S.xp), 20] },
   { id: "w100", name: "百字斬", desc: "答對過 100 個不同的單字", title: "百字斬", gems: 5, tier: 1, p: () => [knownN(), 100] },
-  { id: "wall", name: "單字之神", desc: "336 個課本單字全部答對過", title: "單字之神", gems: 30, tier: 3, p: () => [Object.keys(S.known || {}).filter(i => i < BOOKN).length, BOOKN] },
+  { id: "wall", name: "單字之神", desc: "336 個課本單字全部答對過", title: "單字之神", gems: 30, tier: 4, p: () => [Object.keys(S.known || {}).filter(i => i < BOOKN).length, BOOKN] },
   { id: "m15", name: "配對快手", desc: "配對消除 15 秒內完成", title: "配對快手", gems: 5, tier: 1, p: () => [S.best.match && S.best.match <= 15 ? 1 : 0, 1] },
   { id: "m10", name: "閃電配對", desc: "字庫選課本 336 字全部課次，配對消除 8 秒內完成", title: "閃電手", gems: 10, tier: 2, p: () => [fb("match") && fb("match") <= 8 ? 1 : 0, 1] },
   { id: "q2500", name: "連擊大師", desc: "快問連擊拿到 2500 分", title: "連擊大師", gems: 5, tier: 1, p: () => [S.best.quiz || 0, 2500] },
   { id: "q4500", name: "快問之王", desc: "字庫選課本 336 字、全部課次全選，快問連擊拿到 4500 分", title: "快問之王", gems: 12, tier: 2, p: () => [fb("quiz") || 0, 4500] },
-  { id: "q4000", name: "大考快問王", desc: "字庫選大考 4000（Lv1～4 全選），快問連擊拿到 4500 分", title: "大考快問王", gems: 20, tier: 3, p: () => [fb("quiz", "c4000") || 0, 4500] },
-  { id: "mbook", name: "一模滿分腦", desc: "336 個課本單字全部考過，第一次作答正確率 90% 以上", title: "一模熟讀者", gems: 25, tier: 3, p: masteryP("book", .9), note: masteryNote("book") },
-  { id: "m4000", name: "四千單通關", desc: "大考 4000 字（Lv1～4）全部考過，第一次作答正確率 90% 以上", title: "四千單達人", gems: 60, tier: 3, p: masteryP("c4000", .9), note: masteryNote("c4000") },
-  { id: "m6000", name: "六千單宗師", desc: "大考 6000 字（Lv1～6）全部考過，第一次作答正確率 90% 以上", title: "六千單宗師", gems: 120, tier: 3, p: masteryP("c6000", .9), note: masteryNote("c6000") },
+  { id: "q4000", name: "大考快問王", desc: "字庫選大考 4000（Lv1～4 全選），快問連擊拿到 4500 分", title: "大考快問王", gems: 20, tier: 4, p: () => [fb("quiz", "c4000") || 0, 4500] },
+  { id: "mbook90", name: "一模熟讀者", desc: "336 個課本單字全部考過，第一次作答正確率 90% 以上", title: "一模熟讀者", gems: 40, tier: 3, p: masteryP("book", .9), note: masteryNote("book") },
+  { id: "mbook", name: "一模滿分腦", desc: "在「一模全字挑戰」一次 336 題全部答對，一題都不能錯", title: "一模滿分腦", gems: 150, tier: 4, icon: "🧠", p: () => [S.best.perfect336 ? 1 : 0, 1] },
+  { id: "m4000", name: "四千單通關", desc: "大考 4000 字（Lv1～4）全部考過，第一次作答正確率 90% 以上", title: "四千單達人", gems: 60, tier: 4, p: masteryP("c4000", .9), note: masteryNote("c4000") },
+  { id: "m6000", name: "六千單宗師", desc: "大考 6000 字（Lv1～6）全部考過，第一次作答正確率 90% 以上", title: "六千單宗師", gems: 120, tier: 4, p: masteryP("c6000", .9), note: masteryNote("c6000") },
   { id: "r300", name: "隕石獵人", desc: "單字隕石拿到 300 分", title: "隕石獵人", gems: 6, tier: 1, p: () => [S.best.rock || 0, 300] },
   { id: "s250", name: "拼字工匠", desc: "拼字工坊拿到 250 分", title: "拼字工匠", gems: 6, tier: 1, p: () => [S.best.spell || 0, 250] },
   { id: "l250", name: "順風耳", desc: "字庫選課本 336 字全部課次，聽音拼字 10 題全部一次聽對（250 分）", title: "聽力王", gems: 10, tier: 2, p: () => [fb("listen") || 0, 250] },
   { id: "r600", name: "隕石毀滅者", desc: "字庫選課本 336 字全部課次，單字隕石拿到 600 分", title: "隕石毀滅者", gems: 12, tier: 2, p: () => [fb("rock") || 0, 600] },
   { id: "s250f", name: "拼字大師", desc: "字庫選課本 336 字全部課次，拼字工坊拿到滿分 250", title: "拼字大師", gems: 12, tier: 2, p: () => [fb("spell") || 0, 250] },
-  { id: "l4000", name: "大考順風耳", desc: "字庫選大考 4000（Lv1～4 全選），聽音拼字 10 題全部一次聽對", title: "大考順風耳", gems: 25, tier: 3, p: () => [fb("listen", "c4000") || 0, 250] },
-  { id: "s4000", name: "大考拼字王", desc: "字庫選大考 4000（Lv1～4 全選），拼字工坊拿到滿分 250", title: "大考拼字王", gems: 25, tier: 3, p: () => [fb("spell", "c4000") || 0, 250] },
+  { id: "l4000", name: "大考順風耳", desc: "字庫選大考 4000（Lv1～4 全選），聽音拼字 10 題全部一次聽對", title: "大考順風耳", gems: 25, tier: 4, p: () => [fb("listen", "c4000") || 0, 250] },
+  { id: "s4000", name: "大考拼字王", desc: "字庫選大考 4000（Lv1～4 全選），拼字工坊拿到滿分 250", title: "大考拼字王", gems: 25, tier: 4, p: () => [fb("spell", "c4000") || 0, 250] },
   { id: "f1", name: "交個朋友", desc: "加 1 位好友", title: "好夥伴", gems: 3, tier: 0, p: () => [S.friendsN || 0, 1] },
   { id: "f5", name: "人氣王", desc: "加 5 位好友", title: "人氣王", gems: 8, tier: 1, p: () => [S.friendsN || 0, 5] },
   { id: "v1", name: "首勝", desc: "對戰贏 1 場", title: "初露鋒芒", gems: 3, tier: 0, p: () => [S.wins || 0, 1] },
   { id: "v10", name: "對戰常勝軍", desc: "對戰贏 10 場", title: "對戰常勝軍", gems: 15, tier: 2, p: () => [S.wins || 0, 10] },
 ];
-const TIERS = [["普通", "var(--muted)"], ["稀有", "var(--cool)"], ["史詩", "var(--hot)"], ["傳說", "var(--gold)"], ["開發者", "#ff3fa4"]];
-const FREE = ["game:match", "game:quiz", "game:spell", "game:hear", "game:tf", "game:flip", "skin:default", "av:🙂", "av:🐱", "av:🐶", "title:單字新手"];
+const TIERS = [["普通", "var(--muted)"], ["稀有", "var(--cool)"], ["史詩", "var(--hot)"], ["神話", "#c06bff"], ["傳說", "var(--gold)"], ["開發者", "#ff3fa4"]];
+const FREE = ["game:match", "game:quiz", "game:spell", "game:hear", "game:tf", "game:flip", "game:all", "skin:default", "av:🙂", "av:🐱", "av:🐶", "title:單字新手"];
 
 const lvOf = xp => Math.floor(xp / 300) + 1;
 let S = { xp: 0, wrong: {}, best: {}, lessons: LESSONS.slice(), bank: "book", lvs: [1, 2, 3, 4, 5, 6], wrongOnly: false, autoSay: true, sfx: true,
@@ -653,10 +660,10 @@ function start(m) {
   if (stopFn) stopFn(); stopFn = null;
   const o = MODES.find(x => x.m === m);
   if (!owns("game:" + m)) { showTab("shop"); toast(`「${o.name}」要 ${o.price} 金幣解鎖`); return; }
-  const need = { match: 6, quiz: 4, hear: 4, tf: 4, flip: 8, spot: 6, blank: 6, rock: 3, spell: 3, listen: 3 }[m];
+  const need = { all: 4, match: 6, quiz: 4, hear: 4, tf: 4, flip: 8, spot: 6, blank: 6, rock: 3, spell: 3, listen: 3 }[m];
   const f = m === "rock" || m === "listen" ? typable : m === "spell" ? (x => /^[a-z]{3,12}$/i.test(x.w)) : m === "spot" || m === "blank" ? (x => /^[a-z]{4,12}$/i.test(x.w)) : null;
-  if (pool(f).length < need) { toast(S.wrongOnly ? "錯題本的字太少，先關掉「只練錯題本」" : "選的範圍單字太少，多選幾個課次或級別"); home(); return; }
-  if (["quiz", "hear", "tf", "spot", "blank"].includes(m)) return playQuiz(pool(f), null, m);
+  if (m !== "all" && pool(f).length < need) { toast(S.wrongOnly ? "錯題本的字太少，先關掉「只練錯題本」" : "選的範圍單字太少，多選幾個課次或級別"); home(); return; }
+  if (["quiz", "hear", "tf", "spot", "blank", "all"].includes(m)) return playQuiz(pool(f), null, m);
   ({ match: playMatch, flip: playFlip, rock: playRock, spell: playSpell, listen: playListen })[m](pool(f));
 }
 $("#menu").onclick = e => { const b = e.target.closest(".mode"); if (b) start(b.dataset.m); };
@@ -774,7 +781,8 @@ function playMatch(P) {
 
 /* ---------- 快問連擊（好友對戰也用這個，vs 帶入固定題目與回呼） ---------- */
 function playQuiz(P, vs, kind = "quiz") {
-  const Q = vs ? vs.qs : makeQs(kind, P, uni(), nqN(kind)), qs = Q.map(q => W[q.id]);
+  const BW0 = kind === "all" ? W.filter(x => !x.b) : null;
+  const Q = vs ? vs.qs : kind === "all" ? shuffle(BW0).map(x => mkQ("quiz", x, BW0)) : makeQs(kind, P, uni(), nqN(kind)), qs = Q.map(q => W[q.id]);
   let i = 0, score = 0, combo = 0, right = 0, raf = 0, locked = false, dead = false; const missed = [];
   openStage(`${topBar("", `<span class="pill">題 <b id="qn">1</b>/${qs.length}</span><span class="pill">分數 <b id="sc">0</b></span>`)}
     ${vs ? `<div class="vsboard" id="vsb"></div>` : ""}
@@ -794,6 +802,7 @@ function playQuiz(P, vs, kind = "quiz") {
       if (vs) { dead = true; cancelAnimationFrame(raf); document.removeEventListener("keydown", key); stopFn = null; return vs.onEnd(score, right, missed); }
       const best = !S.best[kind] || score > S.best[kind]; if (best) S.best[kind] = score;
       recFull(kind, score);
+      if (kind === "all" && right === qs.length) S.best.perfect336 = 1;
       return result(kind, score, `答對 ${right}/${qs.length}${best ? "・新紀錄！" : ""}`, missed, right * 4);
     }
     const x = qs[i], q = Q[i], k = q.k || "quiz", enQ = !!q.enQ; locked = false;
