@@ -8,6 +8,7 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.22.1", date: "2026-10-18", items: ["一模全字挑戰：題目固定為「看英文、選中文」（以前會隨機出中文選英文）"] },
   { v: "2.22.0", date: "2026-10-18", items: ["新增「遊戲時間」：只算頁面開著、而且最近 1 分鐘內有操作的時間（掛機、切到別的分頁不算），個人資料看得到，排行榜新增「遊戲時間」榜"] },
   { v: "2.21.4", date: "2026-10-18", items: ["排行榜「一模全字挑戰」：拿過 336 題全對的玩家，分數後面標示「全對」"] },
   { v: "2.21.3", date: "2026-10-18", items: ["修正錯題本重新整理後又變回舊的：雲端存檔用疊加方式寫入，答對刪掉的錯題一直留在雲端、下次登入又被蓋回來；改成整份取代"] },
@@ -190,7 +191,7 @@ const MODES = [
   { m: "flip", tag: "FLIP", name: "記憶翻牌", desc: "16 張蓋著的牌，翻兩張找出英文和中文的一對，翻越少次越好。", price: 0 },
   { m: "spot", tag: "SPOT", name: "拼字找碴", desc: "看中文，從四種拼法裡挑出唯一拼對的那個。", price: 80 },
   { m: "blank", tag: "BLANK", name: "缺字補完", desc: "單字少了一個字母，選出缺的那一個。", price: 100 },
-  { m: "all", tag: "ALL 336", name: "一模全字挑戰", desc: "課本 336 字一次考完，每字一題。全部答對解鎖最高成就「一模滿分腦」。", price: 0 },
+  { m: "all", tag: "ALL 336", name: "一模全字挑戰", desc: "課本 336 字一次考完，每字一題，看英文選中文。全部答對解鎖最高成就「一模滿分腦」。", price: 0 },
   { m: "listen", tag: "LISTEN", name: "聽音拼字", desc: "只聽發音，把單字打出來。打錯一次給中文提示，再錯就公布答案。", price: 150 },
 ];
 const SKINS = [
@@ -1062,12 +1063,12 @@ function misspell(w) {
 // 意思相同判斷：中文釋義拆成片段（；，、/），去掉括號與結尾「的／地」後，有片段相同或一個包含另一個（≥2 字）就算同義，選項不會同時出現
 const meanSegs = x => x._ms || (x._ms = x.c.replace(/[（(][^）)]*[）)]/g, "").split(/[；;，,、\/]/).map(t => t.trim().replace(/[的地]$/, "")).filter(Boolean));
 const sameMean = (a, b) => a.w === b.w || a.c === b.c || meanSegs(a).some(p => meanSegs(b).some(q => p === q || (p.length >= 2 && q.length >= 2 && (p.includes(q) || q.includes(p)))));
-function mkQ(kind, x, dist) {
+function mkQ(kind, x, dist, en) {
   let k = kind;
   if (k === "mix") k = MC_KINDS[Math.random() * MC_KINDS.length | 0];
   const wordOk = /^[a-z]{4,12}$/i.test(x.w);
   if ((k === "spot" || k === "blank") && !wordOk) k = "quiz";
-  const enQ = k === "hear" ? true : Math.random() < .5;
+  const enQ = k === "hear" || en ? true : Math.random() < .5;   // en：固定出英文、選中文
   if (k === "tf") {
     const t = Math.random() < .5 ? x : pick(dist.filter(y => !sameMean(x, y)), 1, ["c"])[0];
     return { k, id: x.id, t: t.id };
@@ -1163,7 +1164,7 @@ document.addEventListener("visibilitychange", () => { if (document.hidden) hidSi
 const hidNow = () => hidTotal + (hidSince ? performance.now() - hidSince : 0);
 function playQuiz(P, vs, kind = "quiz") {
   const BW0 = kind === "all" ? W.filter(x => !x.b) : null;
-  const Q = vs ? vs.qs : kind === "all" ? shuffle(BW0).map(x => mkQ("quiz", x, BW0)) : makeQs(kind, P, uni(), nqN(kind)), qs = Q.map(q => W[q.id]);
+  const Q = vs ? vs.qs : kind === "all" ? shuffle(BW0).map(x => mkQ("quiz", x, BW0, true)) : makeQs(kind, P, uni(), nqN(kind)), qs = Q.map(q => W[q.id]);
   let i = 0, score = 0, combo = 0, right = 0, raf = 0, locked = false, dead = false; const missed = [], sm = vs ? 1 : scopeMul();
   openStage(`${topBar("", `<span class="pill">題 <b id="qn">1</b>/${qs.length}</span><span class="pill">分數 <b id="sc">0</b></span>`)}
     ${vs ? `<div class="vsboard" id="vsb"></div>` : ""}
