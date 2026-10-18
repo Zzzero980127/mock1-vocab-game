@@ -8,6 +8,7 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.21.0", date: "2026-10-18", items: ["新增專屬造型「海納百川」（百川匯流入海的流動水面）：只有解鎖成就「海納百川」才能使用，不在商店賣", "新增「背景」分頁：所有網頁造型一覽、取得方式與價格，並可先預覽", "商店最下面新增「兌換所」：金幣和寶石可以互換（不算進「海納百川」）"] },
   { v: "2.20.0", date: "2026-10-18", items: ["新增金幣成就（累積賺到 500／2000／5000／10000／30000 金幣）與寶石成就（累積 20／60／150／300／600 寶石）", "新增傳說成就「海納百川」：商店所有東西（遊戲、造型、頭像）全部購買才拿得到；之後商店有新商品，沒補買就會被收回，補買後恢復（寶石只發一次）"] },
   { v: "2.19.2", date: "2026-10-18", items: ["商店的造型和頭像改成依價格由低到高排列"] },
   { v: "2.19.1", date: "2026-10-18", items: ["房間大廳：房間裡的人全部離線（超過 2.5 分鐘沒心跳）就自動不再列出，不會再看到沒人的房間"] },
@@ -199,6 +200,7 @@ const SKINS = [
   { k: "mint", name: "薄荷", desc: "清爽的薄荷綠夜色", price: 100, sw: ["#0b1d1a", "#ffa66b", "#5ff0cf"] },
   { k: "snow", name: "雪夜", desc: "深藍夜空，雪花飄落", price: 180, sw: ["#0c1624", "#7cc6ff", "#b9a8ff"] },
   { k: "sunset", name: "夕陽", desc: "漸層天空與緩緩起伏的落日", price: 250, sw: ["#6b2447", "#ff7b54", "#ffb36b"] },
+  { k: "river", name: "海納百川", desc: "百川匯流入海，水面緩緩流動", ach: "shopall", sw: ["#06222b", "#35d6c8", "#5aa9ff"] },
   { k: "cyber", name: "賽博", desc: "霓虹網格與掃描線", price: 12, cur: "gem", sw: ["#070b1a", "#00e5ff", "#ff2bd6"] },
 ];
 const AVATARS = [["🙂", 0], ["🐱", 0], ["🐶", 0], ["🐰", 30], ["🐸", 30], ["🐧", 40], ["🦊", 50], ["🐼", 50], ["🐯", 60], ["🦉", 60], ["🐙", 80], ["🦄", 120], ["🐲", 150], ["🚀", 150], ["👑", 10000],
@@ -208,7 +210,7 @@ const AVATARS = [["🙂", 0], ["🐱", 0], ["🐶", 0], ["🐰", 30], ["🐸", 3
 // 成就：p() 回傳 [目前進度, 目標]；解鎖送稱號和寶石
 const knownN = () => Object.keys(S.known || {}).length;
 const DEV_CODE = "4T623X";   // 遊戲作者的好友代碼
-let devMe = false;   // online.js 登入後用 uid 比對 codes/DEV_CODE 的結果（好友代碼對不上時也認得出作者）
+let devMe = (() => { try { return localStorage.getItem("mock1-devme") === "1"; } catch (e) { return false; } })();   // online.js 登入後用 uid 比對 codes/DEV_CODE 的結果（好友代碼對不上時也認得出作者）
 const isMeDev = () => S.code === DEV_CODE || devMe;
 // 熟練度：一個字庫「每個字都考過」且「第一次作答」正確率達標，才算讀熟（重複刷同一批字沒用）
 const idsOf = k => { const r = k === "book" ? W.filter(x => !x.b) : W.filter(x => x.b && x.lv <= (k === "c4000" ? 4 : 6)); return r.map(x => x.id); };
@@ -264,7 +266,7 @@ const ACH = [
   { id: "e3", name: "寶石大亨", desc: "累積獲得 150 寶石（花掉的也算）", title: "寶石大亨", gems: 12, tier: 2, icon: "💎", p: () => [S.gE || 0, 150] },
   { id: "e4", name: "璀璨之星", desc: "累積獲得 300 寶石（花掉的也算）", title: "璀璨之星", gems: 25, tier: 3, icon: "💎", p: () => [S.gE || 0, 300] },
   { id: "e5", name: "寶石之王", desc: "累積獲得 600 寶石（花掉的也算）", title: "寶石之王", gems: 50, tier: 4, icon: "💎", p: () => [S.gE || 0, 600] },
-  { id: "shopall", name: "海納百川", desc: "買齊商店裡所有東西（遊戲、造型、頭像）。商店有新商品時要補買，否則成就會被收回", title: "海納百川", gems: 200, tier: 5, dyn: true, icon: "🌊", p: () => { const k = shopKeys(); return [k.filter(owns).length, k.length]; }, note: () => { const k = shopKeys(); return `已擁有 ${k.filter(owns).length} / ${k.length}`; } },
+  { id: "shopall", name: "海納百川", desc: "買齊商店裡所有東西（遊戲、造型、頭像）。商店有新商品時要補買，否則成就會被收回", title: "海納百川", gems: 200, tier: 5, dyn: true, skin: "river", icon: "🌊", p: () => { const k = shopKeys(); return [k.filter(owns).length, k.length]; }, note: () => { const k = shopKeys(); return `已擁有 ${k.filter(owns).length} / ${k.length}`; } },
 ];
 const shopKeys = () => [...MODES.filter(o => o.price).map(o => "game:" + o.m), ...SKINS.filter(s => s.price).map(s => "skin:" + s.k), ...AVATARS.filter(a => a[1]).map(a => "av:" + a[0])];
 const ACH_ICON = { welcome: "👋", g10: "🎮", g50: "🕹️", g200: "🔥", lv5: "🌱", lv10: "🌿", lv20: "🌳", lv30: "🏔️", lv40: "👑", lv50: "🌌", w100: "💯", wall: "📚", m15: "🏎️", m10: "🌩️", q2500: "🎯", q4500: "🏹", q4000: "🎓", mbook90: "📖", mbook: "🧠", m4000: "🏫", m6000: "🏛️", r300: "☄️", r600: "💥", s250: "✍️", s250f: "🖋️", l250: "👂", l4000: "🎧", s4000: "🔤", f1: "🤝", f5: "🎉", v1: "⚔️", v10: "🏆", dev: "⚡" };
@@ -423,7 +425,8 @@ function pool(filter) {
   if (S.wrongOnly) p = p.filter(x => S.wrong[x.id]);
   return filter ? p.filter(filter) : p;
 }
-function applySkin() { if (S.skin === "default") document.documentElement.removeAttribute("data-skin"); else document.documentElement.dataset.skin = S.skin; auroraCanvas(S.skin === "aurora"); lavaCanvas(S.skin === "lava"); sakuraCanvas(S.skin === "sakura"); fxCanvas(["gold", "forest", "ocean", "neon"].includes(S.skin) ? S.skin : ""); meteors(S.skin === "galaxy"); }
+let pvSkin = null;   // 背景分頁的預覽（不存檔）
+function applySkin() { const sk = pvSkin || (owns("skin:" + S.skin) ? S.skin : "default"); if (sk === "default") document.documentElement.removeAttribute("data-skin"); else document.documentElement.dataset.skin = sk; auroraCanvas(sk === "aurora"); lavaCanvas(sk === "lava"); sakuraCanvas(sk === "sakura"); fxCanvas(["gold", "forest", "ocean", "neon"].includes(sk) ? sk : ""); meteors(sk === "galaxy"); }
 
 // 夜櫻：offscreen canvas 一次畫好夜空、月亮和幾棵櫻花樹（遞迴樹枝＋花團），之後每幀只貼圖並疊上飄落的花瓣
 let sakuraRaf = 0, sakuraFit = null;
@@ -736,6 +739,7 @@ function showTab(t) {
 function refreshTab() {
   const O = window.ONLINE;
   if (curTab === "shop") renderShop();
+  if (curTab === "bg") renderBg();
   if (curTab === "me") renderMe();
   if (curTab === "ach") renderAch();
   if (curTab === "log") { if (S.seenVer !== CHANGELOG[0].v) { S.seenVer = CHANGELOG[0].v; save(); } renderLogDot(); }
@@ -765,9 +769,9 @@ function checkAch() {
     if (S.ach[a.id]) {
       if (a.dyn && a.p()[0] < a.p()[1]) {   // 動態成就（商店有新商品沒補買）：收回成就與稱號
         delete S.ach[a.id]; lost++;
-        S.owned = S.owned.filter(k => k !== "title:" + a.title);
+        S.owned = S.owned.filter(k => k !== "title:" + a.title && k !== "skin:" + a.skin);
         if (S.title === a.title) S.title = "單字新手";
-      }
+      } else if (a.skin && !S.owned.includes("skin:" + a.skin)) { S.owned.push("skin:" + a.skin); lost++; }   // 先前已拿到成就的人補發造型
       continue;
     }
     const [c, g] = a.p(); if (c < g) continue;
@@ -775,10 +779,11 @@ function checkAch() {
     const again = (S.gOnce || (S.gOnce = {}))[a.id];   // 以前拿過、補買後恢復：不跳特效、不再給寶石（也避開作者身分驗證前的暫時收回）
     if (!again) { S.gOnce[a.id] = 1; S.gems += a.gems; S.gE = (S.gE || 0) + a.gems; }
     if (!owns("title:" + a.title)) S.owned.push("title:" + a.title);
+    if (a.skin && !S.owned.includes("skin:" + a.skin)) S.owned.push("skin:" + a.skin);
     if (again) { lost++; continue; }
     achQ.push(a); n++;
   }
-  if (lost) { save(); renderTop(); if (curTab === "ach") renderAch(); }
+  if (lost) { save(); renderTop(); applySkin(); if (curTab === "ach") renderAch(); }
   if (!n) return;
   save(); renderTop(); if (curTab === "ach") renderAch();
   if (achQ.length === n) popAch();
@@ -873,6 +878,12 @@ function buy(k, price, btn, cur = "coin") {
   if (S[field] < price) { sfx.bad(); toast(`${label}不夠，還差 ${price - S[field]}`); return; }
   armed(btn, `確定花 ${price} ${label}？`, () => { S[field] -= price; S.owned.push(k); save(); sfx.coin(); toast("購買成功！"); hud(); renderShop(); checkAch(); });
 }
+const XR = { c2g: 200, g2c: 50 };   // 200 金幣換 1 寶石；1 寶石換 50 金幣（刻意不對等，避免來回賺）
+function exchange(dir, n, btn) {
+  const cost = dir === "c" ? n * XR.c2g : n, label = dir === "c" ? "金幣" : "寶石", have = dir === "c" ? S.coins : S.gems;
+  if (have < cost) { sfx.bad(); toast(`${label}不夠，還差 ${cost - have}`); return; }
+  armed(btn, "確定兌換？", () => { if (dir === "c") { S.coins -= cost; S.gems += n; } else { S.gems -= cost; S.coins += n * XR.g2c; } save(); sfx.coin(); toast("兌換成功！"); hud(); renderShop(); });
+}
 function renderShop() {
   const sec = (title, sub, items) => `<div class="card"><div class="bar"><h2>${title}</h2><span class="muted">${sub}</span></div><div class="shop">${items}</div></div>`;
   const btn = (k, price, on, use, cur = "coin") => owns(k)
@@ -884,12 +895,16 @@ function renderShop() {
     <p class="muted" style="margin:0">金幣：玩一場約 5～25，升等送 50 + 10×等級，對戰贏 +40。寶石：每升一級 +1、每 5 級 +5，解鎖成就也會給。稱號要靠成就解鎖。</p></div>` +
     sec("💎 寶石商店", "稀有頭像與特殊造型", SKINS.filter(s => s.cur === "gem").sort((a, b) => a.price - b.price).map(skin).join("") + AVATARS.filter(a => a[2] === "gem").sort((a, b) => a[1] - b[1]).map(av).join("")) +
     sec("遊戲", "解鎖新玩法", MODES.filter(o => o.price).map(o => `<div class="item ${owns("game:" + o.m) ? "on" : ""}"><span class="ico" style="font:400 18px var(--f-display);color:var(--hot)">${o.tag}</span><b>${o.name}</b><small>${o.desc}</small>${btn("game:" + o.m, o.price)}</div>`).join("")) +
-    sec("網頁造型", "換整個網站的配色", SKINS.filter(s => s.cur !== "gem").sort((a, b) => a.price - b.price).map(skin).join("")) +
-    sec("頭像", "顯示在名字旁邊", AVATARS.filter(a => a[2] !== "gem").sort((a, b) => a[1] - b[1]).map(av).join(""));
+    sec("網頁造型", "換整個網站的配色", SKINS.filter(s => s.cur !== "gem" && !s.ach).sort((a, b) => a.price - b.price).map(skin).join("")) +
+    sec("頭像", "顯示在名字旁邊", AVATARS.filter(a => a[2] !== "gem").sort((a, b) => a[1] - b[1]).map(av).join("")) +
+    `<div class="card"><div class="bar"><h2>🔁 兌換所</h2><span class="muted">${XR.c2g} 金幣 → 1 寶石；1 寶石 → ${XR.g2c} 金幣</span></div>
+      <p class="muted" style="margin:0">不是商品，兌換不會影響「海納百川」，也不算進累積金幣／寶石成就。</p>
+      <div class="row" style="flex-wrap:wrap;gap:8px">${[1, 5, 10].map(n => `<button class="btn small" data-xc="${n}" type="button">${n * XR.c2g} 金幣 → ${n} 寶石</button>`).join("")}</div>
+      <div class="row" style="flex-wrap:wrap;gap:8px">${[1, 5, 10].map(n => `<button class="btn small gemb" data-xg="${n}" type="button">${n} 寶石 → ${n * XR.g2c} 金幣</button>`).join("")}</div></div>`;
 }
 function use(k) {
   const [type, v] = [k.slice(0, k.indexOf(":")), k.slice(k.indexOf(":") + 1)];
-  if (type === "skin") { S.skin = v; applySkin(); }
+  if (type === "skin") { S.skin = v; pvSkin = null; $("#pvBar")?.remove(); applySkin(); }
   if (type === "av") S.avatar = v;
   if (type === "title") S.title = v;
   save(); sfx.tap(); renderTop(); refreshTab();
@@ -897,6 +912,34 @@ function use(k) {
 $("#shopBox").onclick = e => {
   const b = e.target.closest("button"); if (!b) return;
   if (b.dataset.buy) buy(b.dataset.buy, +b.dataset.p, b, b.dataset.cur);
+  if (b.dataset.use) use(b.dataset.use);
+  if (b.dataset.xc) exchange("c", +b.dataset.xc, b);
+  if (b.dataset.xg) exchange("g", +b.dataset.xg, b);
+};
+
+/* ---------- 背景預覽 ---------- */
+function skinHow(s) {
+  if (s.ach) { const a = achById(s.ach); return `<span style="color:${TIERS[a.tier][1]}">成就「${esc(a.name)}」專屬</span>・需解鎖商店所有東西即可領取${a.note ? `（${a.note()}）` : ""}`; }
+  if (!s.price) return "預設、免費";
+  return `商店購買・<b style="color:${s.cur === "gem" ? "var(--gem)" : "var(--gold)"}">${s.price} ${s.cur === "gem" ? "寶石" : "金幣"}</b>`;
+}
+function endPreview() { pvSkin = null; $("#pvBar")?.remove(); applySkin(); }
+function startPreview(k) {
+  pvSkin = k; applySkin(); $("#pvBar")?.remove();
+  const bar = document.createElement("div"); bar.id = "pvBar";
+  bar.style.cssText = "position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:60;background:var(--panel);color:var(--ink);border:1.5px solid var(--hot);border-radius:14px;padding:10px 16px;display:flex;gap:12px;align-items:center;box-shadow:0 8px 30px rgba(0,0,0,.5)";
+  bar.innerHTML = `<span>預覽中：<b>${esc(SKINS.find(x => x.k === k).name)}</b>（不會存檔）</span><button class="btn small" type="button">結束預覽</button>`;
+  bar.querySelector("button").onclick = endPreview; document.body.append(bar);
+}
+function renderBg() {
+  $("#bgBox").innerHTML = `<div class="card"><h2>背景預覽</h2><p class="muted" style="margin:0">所有網頁造型的取得方式與價格。按「預覽」可以先看整個網站換上去的樣子，不會花錢也不會存檔。</p></div><div class="card"><div class="shop">` +
+    SKINS.map(s => { const have = owns("skin:" + s.k);
+      return `<div class="item ${S.skin === s.k ? "on" : ""}"><span class="swatch">${s.sw.map(c => `<i style="background:${c}"></i>`).join("")}</span><b>${s.name}</b><small>${s.desc}</small><small>${skinHow(s)}</small>
+        <button class="btn small ghost" data-pv="${s.k}" type="button">預覽</button>${have ? (S.skin === s.k ? `<span class="muted">使用中</span>` : `<button class="btn small" data-use="skin:${s.k}" type="button">使用</button>`) : `<span class="muted">未解鎖</span>`}</div>`; }).join("") + `</div></div>`;
+}
+$("#bgBox").onclick = e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.pv) startPreview(b.dataset.pv);
   if (b.dataset.use) use(b.dataset.use);
 };
 
@@ -1362,5 +1405,5 @@ function playListen(P) {
 
 $("#total")?.replaceChildren(String(BOOKN));
 applySkin(); renderChips(); hud(); renderLogDot(); setTimeout(checkAch, 800);
-window.APP = { setDevMe(v) { devMe = !!v; }, get S() { return S; }, set S(v) { S = v; }, save, checkAch, nameHtml, titleHtml, showcaseHtml, showA, DEV_CODE, toast, sfx, modal, esc, lvOf, gain, owns, FREE, renderTop, hud, applySkin, renderChips,
+window.APP = { setDevMe(v) { devMe = !!v; try { localStorage.setItem("mock1-devme", devMe ? "1" : "0"); } catch (e) {} }, get S() { return S; }, set S(v) { S = v; }, save, checkAch, nameHtml, titleHtml, showcaseHtml, showA, DEV_CODE, toast, sfx, modal, esc, lvOf, gain, owns, FREE, renderTop, hud, applySkin, renderChips,
   refreshTab, showTab, openStage, topBar, home, LESSONS, WORDS_BOOK: () => W.filter(x => !x.b), missedTable, playQuiz, makeVsQuestions, armed, get tab() { return curTab; } };
