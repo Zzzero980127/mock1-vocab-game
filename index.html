@@ -64,12 +64,13 @@
 :root[data-skin="cyber"] body::before{content:"";position:fixed;left:0;right:0;bottom:0;height:45%;pointer-events:none;z-index:-1;background-image:linear-gradient(rgba(0,229,255,.28) 1px,transparent 1px),linear-gradient(90deg,rgba(255,43,214,.22) 1px,transparent 1px);background-size:48px 48px;-webkit-mask-image:linear-gradient(transparent,#000);mask-image:linear-gradient(transparent,#000)}
 :root[data-skin="cyber"] body::after{content:"";position:fixed;left:0;right:0;top:0;height:2px;pointer-events:none;z-index:-1;background:linear-gradient(90deg,transparent,#00e5ff,#ff2bd6,transparent);box-shadow:0 0 18px 4px rgba(0,229,255,.5);will-change:transform;animation:scanY 6s linear infinite}
 @keyframes scanY{from{transform:translateY(0)}to{transform:translateY(100vh)}}
-/* v2.21 海納百川：百川匯流入海（只用 transform 動畫） */
-:root[data-skin="river"]{--bg:#041a22;--panel:#0b2c38;--ink:#e6fbff;--muted:#8cc2cc;--line:#1b4d5c;--hot:#35d6c8;--cool:#5aa9ff;--good:#7cf0b4;--bad:#ff7c8f;--soft:#103a49;--gold:#ffe08a;--gem:#9fd0ff;color-scheme:dark}
-:root[data-skin="river"] body{background-image:radial-gradient(ellipse 80% 40% at 50% 0%,rgba(90,200,255,.25),transparent 70%),linear-gradient(180deg,#06303f 0%,#04202c 50%,#031219 100%);background-attachment:fixed}
-:root[data-skin="river"] body::before,:root[data-skin="river"] body::after{content:"";position:fixed;left:-50%;width:200%;bottom:0;height:42%;pointer-events:none;z-index:-1;will-change:transform;background-repeat:repeat-x;background-size:600px 100%;background-image:radial-gradient(ellipse 300px 90px at 300px 100%,rgba(53,214,200,.30),transparent 70%),radial-gradient(ellipse 200px 60px at 80px 100%,rgba(90,169,255,.25),transparent 70%);animation:riverFlow 16s linear infinite}
-:root[data-skin="river"] body::after{height:30%;opacity:.8;background-size:420px 100%;animation-duration:10s;animation-direction:reverse}
-@keyframes riverFlow{to{transform:translateX(-600px)}}
+/* v2.21 海納百川：浮世繪神奈川沖浪裏（river.svg 是大浪＋富士，river-pat.svg 是青海波；只用 transform 動畫） */
+:root[data-skin="river"]{--bg:#091a36;--panel:#0f2b52;--ink:#f6eed6;--muted:#b9c0ae;--line:#2d5c94;--hot:#e0533a;--cool:#e8d6a0;--good:#8fd9a8;--bad:#ff8a73;--soft:#163a68;--gold:#f2d37a;--gem:#a9d6ff;color-scheme:dark}
+:root[data-skin="river"] body{background:#091a36}
+:root[data-skin="river"] body::before{content:"";position:fixed;left:0;right:0;top:-12px;bottom:-12px;pointer-events:none;z-index:-2;background:url(river.svg) center bottom/cover no-repeat;will-change:transform;animation:riverBob 7s ease-in-out infinite alternate}
+:root[data-skin="river"] body::after{content:"";position:fixed;left:-80px;right:-80px;bottom:0;height:20%;pointer-events:none;z-index:-1;background:url(river-pat.svg) repeat;background-size:80px 40px;opacity:.85;will-change:transform;animation:riverFlow 5s linear infinite;-webkit-mask-image:linear-gradient(transparent,#000 35%);mask-image:linear-gradient(transparent,#000 35%)}
+@keyframes riverBob{to{transform:translateY(14px) scale(1.015)}}
+@keyframes riverFlow{to{transform:translateX(80px)}}
 
 :root[data-skin="mint"]{--bg:#0b1d1a;--panel:#12302b;--ink:#e6fff6;--muted:#8fbdb0;--line:#1f4b43;--hot:#ffa66b;--cool:#5ff0cf;--good:#5ff0cf;--bad:#ff7a7a;--soft:#18403a;--gold:#ffe08a;color-scheme:dark}
 :root[data-skin="mint"] body{background-image:radial-gradient(ellipse at 20% 0%,rgba(95,240,207,.22),transparent 55%),radial-gradient(ellipse at 90% 100%,rgba(255,166,107,.16),transparent 55%);background-attachment:fixed}
@@ -348,7 +349,7 @@ th{color:var(--muted);font-weight:600;font-size:13px}
 <script src="words.js?v=6"></script>
 <script src="bankwords.js?v=8"></script>
 <script src="firebase-config.js?v=7"></script>
-<script src="app.js?v=76"></script>
+<script src="app.js?v=78"></script>
 <script type="module" src="online.js?v=26"></script>
 </body>
 </html>

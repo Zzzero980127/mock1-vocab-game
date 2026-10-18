@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="80" height="40" viewBox="0 0 80 40">
+<defs><g id="s"><path d="M-40 0A40 40 0 0 1 40 0Z" fill="#14447a" stroke="#cfe3ee" stroke-opacity=".55" stroke-width="1.6"/><path d="M-30 0A30 30 0 0 1 30 0Z" fill="#14447a" stroke="#cfe3ee" stroke-opacity=".5" stroke-width="1.6"/><path d="M-20 0A20 20 0 0 1 20 0Z" fill="#14447a" stroke="#cfe3ee" stroke-opacity=".5" stroke-width="1.6"/><path d="M-10 0A10 10 0 0 1 10 0Z" fill="#14447a" stroke="#cfe3ee" stroke-opacity=".5" stroke-width="1.6"/></g></defs>
+<rect width="80" height="40" fill="#14447a"/>
+<use href="#s" x="0" y="20"/><use href="#s" x="80" y="20"/><use href="#s" x="40" y="40"/><use href="#s" x="0" y="60"/><use href="#s" x="80" y="60"/>
+</svg>
