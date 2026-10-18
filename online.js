@@ -602,7 +602,7 @@ function renderVs(box) {
   const inp = $("#fcode"); if (inp) inp.onkeydown = e => { if (e.key === "Enter") addFriend(inp.value); };
 }
 const CATS = [["xp", "等級", "desc"], ["best.quiz", "快問連擊", "desc"], ["best.rock", "單字隕石", "desc"], ["best.spell", "拼字工坊", "desc"],
-  ["best.listen", "聽音拼字", "desc"], ["best.match", "配對最快", "asc"], ["wins", "對戰勝場", "desc"], ["achN", "成就數", "desc"], ["coins", "金幣", "desc"], ["gems", "寶石", "desc"]];
+  ["best.listen", "聽音拼字", "desc"], ["best.all", "一模全字挑戰", "desc"], ["best.match", "配對最快", "asc"], ["wins", "對戰勝場", "desc"], ["achN", "成就數", "desc"], ["coins", "金幣", "desc"], ["gems", "寶石", "desc"]];
 const getPath = (d, p) => p.split(".").reduce((o, k) => o?.[k], d);
 function fmt(cat, d) {
   const v = getPath(d, cat);
