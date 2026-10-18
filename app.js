@@ -391,6 +391,7 @@ function sakuraCanvas(on) {
     if (document.documentElement.dataset.skin !== "sakura") { sakuraCanvas(false); return; }
     if (!still) sakuraRaf = requestAnimationFrame(draw);
     if (!still && (document.hidden || ms - last < 33)) return; last = ms;
+    if (!w || !h) { build(); if (!w || !h) return; }
     g.drawImage(tree, 0, 0);
     for (const p of ps) {
       p.ph += .02; p.x += p.vx + Math.sin(p.ph) * .6; p.y += p.vy; p.rot += p.vr;
