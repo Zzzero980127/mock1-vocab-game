@@ -772,11 +772,13 @@ function checkAch() {
     }
     const [c, g] = a.p(); if (c < g) continue;
     S.ach[a.id] = a.id === "welcome" ? S.joined : today();
-    if (!(S.gOnce || (S.gOnce = {}))[a.id]) { S.gOnce[a.id] = 1; S.gems += a.gems; S.gE = (S.gE || 0) + a.gems; }
+    const again = (S.gOnce || (S.gOnce = {}))[a.id];   // 以前拿過、補買後恢復：不跳特效、不再給寶石（也避開作者身分驗證前的暫時收回）
+    if (!again) { S.gOnce[a.id] = 1; S.gems += a.gems; S.gE = (S.gE || 0) + a.gems; }
     if (!owns("title:" + a.title)) S.owned.push("title:" + a.title);
+    if (again) { lost++; continue; }
     achQ.push(a); n++;
   }
-  if (lost) { save(); renderTop(); if (curTab === "ach") renderAch(); toast("商店有新商品，成就「海納百川」暫時收回，補買就會恢復"); }
+  if (lost) { save(); renderTop(); if (curTab === "ach") renderAch(); }
   if (!n) return;
   save(); renderTop(); if (curTab === "ach") renderAch();
   if (achQ.length === n) popAch();
