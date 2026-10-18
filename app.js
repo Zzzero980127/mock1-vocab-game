@@ -7,6 +7,7 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.9.9", date: "2026-10-18", items: ["熔岩噴泉改成持續噴湧：先衝到頂的岩漿先散開落下，後面的繼續往上衝，不再整批一起落"] },
   { v: "2.9.8", date: "2026-10-18", items: ["熔岩噴泉的岩漿柱加粗"] },
   { v: "2.9.7", date: "2026-10-18", items: ["熔岩噴發改成噴泉：一道岩漿柱往上衝，到頂點向四周散開再落下；頻率降低（每側約 15～25 秒一次）"] },
   { v: "2.9.6", date: "2026-10-18", items: ["熔岩噴發變成大片：岩漿柱更寬、更厚、持續更久"] },
@@ -383,8 +384,8 @@ function lavaCanvas(on) {
     lavaRaf = requestAnimationFrame(frame);
     if (t - last < 33) return; last = t;
     for (const o of sides) {
-      if (t > o.nextAt && !o.emit) { o.emit = 18 + Math.random() * 8 | 0; o.P = h * (.5 + Math.random() * .3); o.x0 = o.d < 0 ? 120 + Math.random() * 200 : W_ - 120 - Math.random() * 200; o.nextAt = t + 14000 + Math.random() * 12000; }
-      if (o.emit) { o.emit--; for (let i = 0; i < 4; i++) o.ps.push({ x: o.x0 + (Math.random() - .5) * 30, y: h + 24, vx: (Math.random() - .5) * .5, vy: -Math.sqrt(2 * gr * o.P * (.92 + Math.random() * .08)), r: 17 + Math.random() * 10, top: false }); }
+      if (t > o.nextAt && !o.emit) { o.emit = 50 + Math.random() * 20 | 0; o.P = h * (.5 + Math.random() * .3); o.x0 = o.d < 0 ? 120 + Math.random() * 200 : W_ - 120 - Math.random() * 200; o.nextAt = t + 14000 + Math.random() * 12000; }
+      if (o.emit) { o.emit--; for (let i = 0; i < 2; i++) o.ps.push({ x: o.x0 + (Math.random() - .5) * 30, y: h + 24, vx: (Math.random() - .5) * .5, vy: -Math.sqrt(2 * gr * o.P * (.8 + Math.random() * .2)), r: 20 + Math.random() * 10, top: false }); }
       const g = o.g; g.clearRect(0, 0, W_, h);
       o.ps = o.ps.filter(p => p.y < h + 40);
       for (const p of o.ps) {
