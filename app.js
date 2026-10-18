@@ -8,6 +8,7 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.15.0", date: "2026-10-18", items: ["個人資料新增「展示稱號」：最多選 5 個稱號，好友清單和排行榜會顯示給其他人看"] },
   { v: "2.14.3", date: "2026-10-18", items: ["「一模霸主」（336 字累積答對）比「一模熟讀者」簡單，稀有度降為史詩、獎勵 15 寶石"] },
   { v: "2.14.2", date: "2026-10-18", items: ["成就稀有度顏色調整：史詩紫色、神話金色、傳說彩虹"] },
   { v: "2.14.1", date: "2026-10-18", items: ["成就改名：升到 Lv 20 改叫「二十級霸主」，336 個課本單字全部答對改叫「一模霸主」（原「單字之神」）"] },
@@ -780,6 +781,8 @@ $("#shopBox").onclick = e => {
 };
 
 /* ---------- 個人資料 ---------- */
+const showT = () => (S.showT || []).filter(t => S.owned.includes("title:" + t)).slice(0, 5);   // 個人檔案展示櫃：最多 5 個稱號，其他人看得到
+const showcaseHtml = (list, dev) => (list || []).slice(0, 5).map(t => titleHtml(t, dev)).filter(Boolean).join("<span class=\"muted\"> ｜ </span>");
 const myTitles = () => S.owned.filter(k => k.startsWith("title:")).map(k => k.slice(6));
 function renderMe() {
   const L = lvOf(S.xp), done = ACH.filter(a => S.ach[a.id]).length, total = ACH.filter(a => !a.hidden || S.ach[a.id]).length;
@@ -791,6 +794,8 @@ function renderMe() {
     <div class="card"><h2>頭像</h2><div class="chips">${AVATARS.filter(([a]) => owns("av:" + a)).map(([a]) => `<button class="chip" style="font-size:22px" data-use="av:${a}" aria-pressed="${S.avatar === a}">${a}</button>`).join("")}</div>
       <h2>稱號</h2><div class="chips">${myTitles().map(t => `<button class="chip" data-use="title:${esc(t)}" aria-pressed="${S.title === t}">${esc(t)}</button>`).join("")}</div>
       <p class="muted" style="margin:0">稱號靠解鎖成就取得，到「成就」頁看還有哪些。</p>
+      <h2>展示稱號（${showT().length}/5）</h2><div class="chips">${myTitles().map(t => `<button class="chip" data-show="${esc(t)}" aria-pressed="${showT().includes(t)}">${esc(t)}</button>`).join("")}</div>
+      <p class="muted" style="margin:0">最多選 5 個，好友清單和排行榜會顯示給其他人看。</p>
       <h2>網頁造型</h2><div class="chips">${SKINS.filter(s => owns("skin:" + s.k)).map(s => `<button class="chip" data-use="skin:${s.k}" aria-pressed="${S.skin === s.k}">${s.name}</button>`).join("")}</div>
       <p class="muted" style="margin:0">更多頭像和造型在商店買。</p></div>
     <div class="card"><h2>我的紀錄</h2><div class="tbl"><table>
@@ -804,6 +809,13 @@ function renderMe() {
 }
 $("#meBox").onclick = e => {
   const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.show) {
+    const t = b.dataset.show, cur = showT();
+    if (cur.includes(t)) S.showT = cur.filter(x => x !== t);
+    else if (cur.length >= 5) { toast("最多展示 5 個稱號，先取消一個吧"); return; }
+    else S.showT = [...cur, t];
+    save(); renderMe(); return;
+  }
   if (b.dataset.use) use(b.dataset.use);
   if (b.id === "nameSave") {
     const v = $("#nameIn").value.trim().slice(0, 12);
@@ -1224,5 +1236,5 @@ function playListen(P) {
 
 $("#total")?.replaceChildren(String(BOOKN));
 applySkin(); renderChips(); hud(); renderLogDot(); setTimeout(checkAch, 800);
-window.APP = { setDevMe(v) { devMe = !!v; }, get S() { return S; }, set S(v) { S = v; }, save, checkAch, nameHtml, titleHtml, DEV_CODE, toast, sfx, modal, esc, lvOf, gain, owns, FREE, renderTop, hud, applySkin, renderChips,
+window.APP = { setDevMe(v) { devMe = !!v; }, get S() { return S; }, set S(v) { S = v; }, save, checkAch, nameHtml, titleHtml, showcaseHtml, showT, DEV_CODE, toast, sfx, modal, esc, lvOf, gain, owns, FREE, renderTop, hud, applySkin, renderChips,
   refreshTab, showTab, openStage, topBar, home, LESSONS, WORDS_BOOK: () => W.filter(x => !x.b), missedTable, playQuiz, makeVsQuestions, armed, get tab() { return curTab; } };
