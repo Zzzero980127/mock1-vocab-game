@@ -408,7 +408,13 @@ function auroraCanvas(on) {
 }
 // 名字／稱號的顯示（作者有專屬特效）
 const nameHtml = (name, dev) => dev ? `<span class="shine dev-glow">${esc(name)}</span><span class="devbadge">DEV</span>` : esc(name);
-const titleHtml = (title, dev) => title === "遊戲設計者" ? (dev ? `<span class="shine">⚡ 遊戲設計者</span>` : "") : esc(title);
+const titleHtml = (title, dev) => {
+  if (title === "遊戲設計者") return dev ? `<span class="shine">⚡ 遊戲設計者</span>` : "";
+  const a = ACH.find(x => x.title === title && !x.hidden);   // 稱號顏色 = 對應成就的稀有度顏色，神話以上再加光暈
+  if (!a || a.tier < 1) return esc(title);
+  const c = TIERS[a.tier][1];
+  return `<span style="color:${c};font-weight:700${a.tier >= 3 ? `;text-shadow:0 0 10px ${c}` : ""}">${esc(title)}</span>`;
+};
 function renderTop() {
   const L = lvOf(S.xp), into = S.xp - (L - 1) * 300;
   $("#meAv").textContent = S.avatar; $("#meName").innerHTML = nameHtml(S.name, isMeDev()); $("#meTitle").innerHTML = titleHtml(S.title, isMeDev()); $("#meBtn").classList.toggle("dev", isMeDev());
