@@ -112,7 +112,12 @@ function pub() {
 }
 async function push() {
   if (!user) return;
-  try { await F.setDoc(F.doc(db, "users", user.uid), pub(), { merge: true }); rankCache = {}; }
+  try {
+    // updateDoc 會整個換掉 wrong／ach 這類 map；setDoc merge 只會疊加、刪掉的錯題會一直留在雲端，下次登入又被蓋回來
+    const ref = F.doc(db, "users", user.uid), d = pub();
+    try { await F.updateDoc(ref, d); } catch (e) { if (e.code === "not-found") await F.setDoc(ref, d, { merge: true }); else throw e; }
+    rankCache = {};
+  }
   catch (e) { console.error(e); }
 }
 function beat() {
