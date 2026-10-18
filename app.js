@@ -280,7 +280,16 @@ function speak(w, rate = .9) {
 }
 const sayIf = w => S.autoSay && speak(w);
 let AC = null;
-function ctx() { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === "suspended") AC.resume(); return AC; }
+function ctx() {
+  if (AC && AC.state === "closed") AC = null;
+  AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+  if (AC.state !== "running") AC.resume();   // suspended／interrupted（耳機插拔、藍牙切換後）
+  return AC;
+}
+// 換輸出裝置（插拔耳機、藍牙連線）時丟掉舊的 context，下次發聲重建才會接到新輸出
+const resetAudio = () => { try { if (AC) AC.close(); } catch (e) {} AC = null; };
+try { navigator.mediaDevices.addEventListener("devicechange", resetAudio); } catch (e) {}
+document.addEventListener("visibilitychange", () => { if (!document.hidden && AC && AC.state !== "running") resetAudio(); });
 // 手機解鎖：iOS 靜音鍵會吃掉 Web Audio，且 AudioContext 要在手勢內 resume
 function unlockAudio() {
   try {
