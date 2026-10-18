@@ -8,6 +8,7 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.21.2", date: "2026-10-18", items: ["背景預覽頁分成「金幣」「寶石」「成就限定」三個分頁，各自依價格排序"] },
   { v: "2.21.1", date: "2026-10-18", items: ["背景預覽頁的造型也依價格排序（免費→金幣由低到高→寶石由低到高→成就專屬）"] },
   { v: "2.21.0", date: "2026-10-18", items: ["新增專屬造型「海納百川」（浮世繪「神奈川沖浪裏」風：巨浪、富士山、流動的青海波）：只有解鎖成就「海納百川」才能使用，不在商店賣", "新增「背景」分頁：所有網頁造型一覽、取得方式與價格，並可先預覽", "商店最下面新增「兌換所」：金幣和寶石可以互換（不算進「海納百川」）"] },
   { v: "2.20.0", date: "2026-10-18", items: ["新增金幣成就（累積賺到 500／2000／5000／10000／30000 金幣）與寶石成就（累積 20／60／150／300／600 寶石）", "新增傳說成就「海納百川」：商店所有東西（遊戲、造型、頭像）全部購買才拿得到；之後商店有新商品，沒補買就會被收回，補買後恢復（寶石只發一次）"] },
@@ -932,14 +933,16 @@ function startPreview(k) {
   bar.innerHTML = `<span>預覽中：<b>${esc(SKINS.find(x => x.k === k).name)}</b>（不會存檔）</span><button class="btn small" type="button">結束預覽</button>`;
   bar.querySelector("button").onclick = endPreview; document.body.append(bar);
 }
+let bgSub = "coin";
 function renderBg() {
-  $("#bgBox").innerHTML = `<div class="card"><h2>背景預覽</h2><p class="muted" style="margin:0">所有網頁造型的取得方式與價格。按「預覽」可以先看整個網站換上去的樣子，不會花錢也不會存檔。</p></div><div class="card"><div class="shop">` +
-    SKINS.slice().sort((a, b) => (a.ach ? 1 : 0) - (b.ach ? 1 : 0) || (a.cur === "gem" ? 1 : 0) - (b.cur === "gem" ? 1 : 0) || (a.price || 0) - (b.price || 0)).map(s => { const have = owns("skin:" + s.k);
+  $("#bgBox").innerHTML = `<div class="card"><h2>背景預覽</h2><p class="muted" style="margin:0">所有網頁造型的取得方式與價格。按「預覽」可以先看整個網站換上去的樣子，不會花錢也不會存檔。</p></div><div class="card"><div class="chips" style="margin-bottom:12px">${[["coin", "🪙 金幣"], ["gem", "💎 寶石"], ["ach", "🏆 成就限定"]].map(([k, n]) => `<button class="chip" data-sub="${k}" aria-pressed="${bgSub === k}">${n}</button>`).join("")}</div><div class="shop">` +
+    SKINS.filter(s => (s.ach ? "ach" : s.cur === "gem" ? "gem" : "coin") === bgSub).sort((a, b) => (a.price || 0) - (b.price || 0)).map(s => { const have = owns("skin:" + s.k);
       return `<div class="item ${S.skin === s.k ? "on" : ""}"><span class="swatch">${s.sw.map(c => `<i style="background:${c}"></i>`).join("")}</span><b>${s.name}</b><small>${s.desc}</small><small>${skinHow(s)}</small>
         <button class="btn small ghost" data-pv="${s.k}" type="button">預覽</button>${have ? (S.skin === s.k ? `<span class="muted">使用中</span>` : `<button class="btn small" data-use="skin:${s.k}" type="button">使用</button>`) : `<span class="muted">未解鎖</span>`}</div>`; }).join("") + `</div></div>`;
 }
 $("#bgBox").onclick = e => {
   const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.sub) { bgSub = b.dataset.sub; renderBg(); }
   if (b.dataset.pv) startPreview(b.dataset.pv);
   if (b.dataset.use) use(b.dataset.use);
 };
