@@ -8,6 +8,7 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.16.0", date: "2026-10-18", items: ["成就分成「一般」「一模」「大考字庫」三區（之後二～五模會各有一區）", "成就改成成長制：同一系列只顯示目前這一階，解完才出現下一階，點卡片可預覽後面的階段"] },
   { v: "2.15.0", date: "2026-10-18", items: ["個人資料新增「展示稱號」：最多選 5 個稱號，好友清單和排行榜會顯示給其他人看"] },
   { v: "2.14.3", date: "2026-10-18", items: ["「一模霸主」（336 字累積答對）比「一模熟讀者」簡單，稀有度降為史詩、獎勵 15 寶石"] },
   { v: "2.14.2", date: "2026-10-18", items: ["成就稀有度顏色調整：史詩紫色、神話金色、傳說彩虹"] },
@@ -729,22 +730,51 @@ function popAch() {
   document.body.append(el);
   setTimeout(() => { el.remove(); achQ.shift(); popAch(); }, 2800);
 }
-function renderAch() {
-  const list = ACH.filter(a => !a.hidden || S.ach[a.id]), done = list.filter(a => S.ach[a.id]).length;
-  $("#achBox").innerHTML = `<div class="card"><div class="bar"><h2>成就 ${done} / ${list.length}</h2><span class="pill gem">寶石 <b>${S.gems}</b></span></div>
-    <p class="muted" style="margin:0">達成條件就自動解鎖，拿到稱號和寶石。寶石可以在商店買稀有頭像和特殊造型。${S.joined ? `你在 <b>${S.joined}</b> 加入遊樂場。` : "用 Google 登入就能拿到「歡迎加入」。"}</p>
-    <div class="xpbar"><i style="width:${done / list.length * 100}%"></i></div></div>
-    <div class="achs">${list.map(a => {
-      const got = S.ach[a.id], [c, g] = a.p(), t = TIERS[a.tier];
-      return `<div class="ach ${got ? "got" : ""} ${got && a.tier >= 2 ? "epic" : ""} ${a.tier === 4 ? "rb" : ""}" style="--tc:${t[1]}">
+// 成就分區與成長鏈：每條鏈依序解鎖，畫面只顯示目前這一階，點卡片可預覽後面幾階。之後加二～五模就在 ACH_CATS 加一區、CHAINS 加一組
+const ACH_CATS = [["gen", "一般"], ["m1", "一模"], ["bank", "大考字庫"]];
+const CHAINS = {
+  gen: [["welcome"], ["g10", "g50", "g200"], ["lv5", "lv10", "lv20"], ["w100"], ["m15"], ["q2500"], ["r300"], ["s250"], ["f1", "f5"], ["v1", "v10"], ["dev"]],
+  m1: [["wall", "mbook90", "mbook"], ["m10"], ["q4500"], ["l250"], ["r600"], ["s250f"]],
+  bank: [["m4000", "m6000"], ["q4000"], ["l4000"], ["s4000"]],
+};
+let achCat = "gen";
+const achById = id => ACH.find(a => a.id === id);
+const chainsOf = cat => CHAINS[cat].map(ids => ids.map(achById).filter(a => a && (!a.hidden || S.ach[a.id]))).filter(c => c.length);
+const achCard = (a, n, N, chainIdx) => {
+  const got = S.ach[a.id], [c, g] = a.p(), t = TIERS[a.tier];
+  return `<div class="ach ${got ? "got" : ""} ${got && a.tier >= 2 ? "epic" : ""} ${a.tier === 4 ? "rb" : ""}" style="--tc:${t[1]};${N > 1 ? "cursor:pointer" : ""}" ${N > 1 ? `data-chain="${chainIdx}" role="button" tabindex="0"` : ""}>
         <div class="bar"><span class="trophy">${got ? a.icon || "🏆" : "🔒"}</span><span class="tier">${t[0]}</span></div>
         <b>${esc(a.name)}</b><small>${esc(a.desc)}</small>
         <div class="plate"><span class="av">${S.avatar}</span><span><b>${nameHtml(S.name, isMeDev())}</b><small>${a.id === "dev" ? titleHtml(a.title, true) : esc(a.title)}</small></span></div>
         <small>獎勵：稱號「${esc(a.title)}」・<span style="color:var(--gem)">${a.gems} 寶石</span></small>
         ${got ? `<small class="ok">${a.id === "welcome" ? "加入日期" : "解鎖於"} ${got}</small>`
           : `<div class="xpbar"><i style="width:${Math.min(1, c / g) * 100}%"></i></div><small>${Math.min(c, g)} / ${g}</small>${a.note ? `<small>${a.note()}</small>` : ""}`}
-      </div>`; }).join("")}</div>`;
+        ${N > 1 ? `<small style="color:var(--cool)">第 ${n} / ${N} 階・點一下預覽後面的階段</small>` : ""}
+      </div>`;
+};
+function renderAch() {
+  const all = ACH.filter(a => !a.hidden || S.ach[a.id]), done = all.filter(a => S.ach[a.id]).length;
+  const cnt = cat => { const l = chainsOf(cat).flat(); return `${l.filter(a => S.ach[a.id]).length}/${l.length}`; };
+  const chains = chainsOf(achCat);
+  $("#achBox").innerHTML = `<div class="card"><div class="bar"><h2>成就 ${done} / ${all.length}</h2><span class="pill gem">寶石 <b>${S.gems}</b></span></div>
+    <p class="muted" style="margin:0">達成條件就自動解鎖，拿到稱號和寶石。同一系列要先完成前一階，下一階才會出現。${S.joined ? `你在 <b>${S.joined}</b> 加入遊樂場。` : "用 Google 登入就能拿到「歡迎加入」。"}</p>
+    <div class="xpbar"><i style="width:${done / all.length * 100}%"></i></div>
+    <div class="chips">${ACH_CATS.map(([k, n]) => `<button class="chip" data-cat="${k}" aria-pressed="${achCat === k}">${n} ${cnt(k)}</button>`).join("")}</div></div>
+    <div class="achs">${chains.map((c, ci) => { const k = c.findIndex(a => !S.ach[a.id]), at = k < 0 ? c.length - 1 : k; return achCard(c[at], at + 1, c.length, ci); }).join("")}</div>`;
 }
+$("#achBox").onclick = e => {
+  const cb = e.target.closest("[data-cat]"); if (cb) { achCat = cb.dataset.cat; renderAch(); return; }
+  const c = e.target.closest("[data-chain]"); if (!c) return;
+  const ch = chainsOf(achCat)[+c.dataset.chain]; if (!ch) return;
+  modal(`<h2>成就系列：${esc(ch[0].name)}${ch.length > 1 ? " ➜ …" : ""}</h2><div style="display:flex;flex-direction:column;gap:10px;margin:10px 0">${ch.map((a, i) => {
+    const got = S.ach[a.id], [p, g] = a.p(), t = TIERS[a.tier];
+    return `<div style="border:1.5px solid ${got ? t[1] : "var(--line)"};border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:4px">
+      <div class="bar"><b>第 ${i + 1} 階・${esc(a.name)}</b><span class="tier ${a.tier === 4 ? "rb" : ""}" style="--tc:${t[1]};color:${t[1]};border:1px solid ${t[1]};border-radius:6px;padding:0 6px;font-size:11px;font-weight:700">${t[0]}</span></div>
+      <small class="muted">${esc(a.desc)}</small>
+      <small>獎勵：稱號「${esc(a.title)}」・<span style="color:var(--gem)">${a.gems} 寶石</span></small>
+      <small class="${got ? "ok" : "muted"}" style="${got ? "color:var(--good);font-weight:700" : ""}">${got ? `✔ 已解鎖 ${got}` : `進度 ${Math.min(p, g)} / ${g}`}</small></div>`; }).join("")}</div>
+    <button class="btn" data-close type="button">關閉</button>`);
+};
 
 /* ---------- 商店 ---------- */
 const CUR = { coin: ["金幣", "var(--gold)", "coins"], gem: ["寶石", "var(--gem)", "gems"] };
