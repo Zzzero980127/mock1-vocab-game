@@ -8,6 +8,7 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.18.1", date: "2026-10-18", items: ["展示成就上方新增 5 個預覽框，看得到目前選了哪幾個，點框內圖標可取消；「配對快手」改用 🏎️ 避免和開發者圖標重複"] },
   { v: "2.18.0", date: "2026-10-18", items: ["每個成就都有專屬小圖標", "個人資料「展示稱號」改成「展示成就」：選最多 5 個成就小圖標，好友清單和排行榜顯示給別人看（邊框顏色依稀有度）"] },
   { v: "2.17.1", date: "2026-10-18", items: ["成就系列預覽改成橫排小圖標（普通 ➜ 稀有 ➜ 超稀有…），點圖標下方說明欄切換，不再被截掉"] },
   { v: "2.17.0", date: "2026-10-18", items: ["新增稀有度「超稀有」（稀有與史詩之間）：Lv 20 超稀有、Lv 30 史詩、Lv 40 神話、Lv 50 傳說", "升級越來越難：Lv k 升 Lv k+1 要 300 + 10×(k-1) XP（Lv 20 需 7410 XP、Lv 50 需 26460 XP）"] },
@@ -239,7 +240,7 @@ const ACH = [
   { id: "v1", name: "首勝", desc: "對戰贏 1 場", title: "初露鋒芒", gems: 3, tier: 0, p: () => [S.wins || 0, 1] },
   { id: "v10", name: "對戰常勝軍", desc: "對戰贏 10 場", title: "對戰常勝軍", gems: 15, tier: 3, p: () => [S.wins || 0, 10] },
 ];
-const ACH_ICON = { welcome: "👋", g10: "🎮", g50: "🕹️", g200: "🔥", lv5: "🌱", lv10: "🌿", lv20: "🌳", lv30: "🏔️", lv40: "👑", lv50: "🌌", w100: "💯", wall: "📚", m15: "⚡", m10: "🌩️", q2500: "🎯", q4500: "🏹", q4000: "🎓", mbook90: "📖", mbook: "🧠", m4000: "🏫", m6000: "🏛️", r300: "☄️", r600: "💥", s250: "✍️", s250f: "🖋️", l250: "👂", l4000: "🎧", s4000: "🔤", f1: "🤝", f5: "🎉", v1: "⚔️", v10: "🏆", dev: "⚡" };
+const ACH_ICON = { welcome: "👋", g10: "🎮", g50: "🕹️", g200: "🔥", lv5: "🌱", lv10: "🌿", lv20: "🌳", lv30: "🏔️", lv40: "👑", lv50: "🌌", w100: "💯", wall: "📚", m15: "🏎️", m10: "🌩️", q2500: "🎯", q4500: "🏹", q4000: "🎓", mbook90: "📖", mbook: "🧠", m4000: "🏫", m6000: "🏛️", r300: "☄️", r600: "💥", s250: "✍️", s250f: "🖋️", l250: "👂", l4000: "🎧", s4000: "🔤", f1: "🤝", f5: "🎉", v1: "⚔️", v10: "🏆", dev: "⚡" };
 const achIcon = a => a.icon || ACH_ICON[a.id] || "🏆";   // 每個成就一個專屬小圖標
 const TIERS = [["普通", "var(--muted)"], ["稀有", "var(--cool)"], ["超稀有", "#4d8dff"], ["史詩", "#a56bff"], ["神話", "#ffc83d"], ["傳說", "#ff6ad5"], ["開發者", "#ff3fa4"]];
 const FREE = ["game:match", "game:quiz", "game:spell", "game:hear", "game:tf", "game:flip", "game:all", "skin:default", "av:🙂", "av:🐱", "av:🐶", "title:單字新手"];
@@ -848,7 +849,8 @@ function renderMe() {
     <div class="card"><h2>頭像</h2><div class="chips">${AVATARS.filter(([a]) => owns("av:" + a)).map(([a]) => `<button class="chip" style="font-size:22px" data-use="av:${a}" aria-pressed="${S.avatar === a}">${a}</button>`).join("")}</div>
       <h2>稱號</h2><div class="chips">${myTitles().map(t => `<button class="chip" data-use="title:${esc(t)}" aria-pressed="${S.title === t}">${titleHtml(t, isMeDev())}</button>`).join("")}</div>
       <p class="muted" style="margin:0">稱號靠解鎖成就取得，到「成就」頁看還有哪些。</p>
-      <h2>展示成就（${showA().length}/5）</h2><div class="chips">${ACH.filter(a => S.ach[a.id]).map(a => `<button type="button" class="chip" data-show="${a.id}" aria-pressed="${showA().includes(a.id)}" style="padding:3px;border:0;background:none" aria-label="${esc(a.name)}">${achBadge(a, true)}</button>`).join("") || `<span class="muted">還沒有解鎖的成就</span>`}</div>
+      <h2>展示成就（${showA().length}/5）</h2>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="muted">預覽</span>${Array.from({ length: 5 }, (_, i) => { const a = achById(showA()[i]); return a ? `<button type="button" data-show="${a.id}" style="padding:0;border:0;background:none;cursor:pointer" aria-label="取消 ${esc(a.name)}">${achBadge(a, true)}</button>` : `<span style="width:40px;height:40px;border:1.5px dashed var(--line);border-radius:10px;display:inline-block"></span>`; }).join("")}</div><div class="chips">${ACH.filter(a => S.ach[a.id]).map(a => `<button type="button" class="chip" data-show="${a.id}" aria-pressed="${showA().includes(a.id)}" style="padding:3px;border:0;background:none" aria-label="${esc(a.name)}">${achBadge(a, true)}</button>`).join("") || `<span class="muted">還沒有解鎖的成就</span>`}</div>
       <p class="muted" style="margin:0">點小圖標加入或取消，最多 5 個，好友清單和排行榜會顯示給其他人看。</p>
       <h2>網頁造型</h2><div class="chips">${SKINS.filter(s => owns("skin:" + s.k)).map(s => `<button class="chip" data-use="skin:${s.k}" aria-pressed="${S.skin === s.k}">${s.name}</button>`).join("")}</div>
       <p class="muted" style="margin:0">更多頭像和造型在商店買。</p></div>
