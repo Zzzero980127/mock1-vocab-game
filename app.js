@@ -7,6 +7,7 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.11.1", date: "2026-10-18", items: ["範圍加成：快問連擊、聽音選義、是非快答、拼字找碴、缺字補完、單字隕石的分數，會隨選的課數（大考字庫是級別數）線性加成——只選 1 課 ×1，全選 ×2（只練錯題本、好友對戰不加成）", "快問之王／大考快問王門檻因全選有 ×2 加成，調回 4500"] },
   { v: "2.11.0", date: "2026-10-18", items: ["計時模式改成階梯給分：把限時切成四等份，依序拿 100%／50%／25%／0% 的分數（連擊倍率照舊）。快問連擊、聽音選義、拼字找碴、缺字補完限時改 20 秒（是非快答仍 6 秒），單字隕石依擊碎時機拿 10／5／3／0 分", "分數整體變低，成就門檻同步調整：連擊大師 1250、快問之王／大考快問王 2250、隕石獵人 200、隕石毀滅者 400"] },
   { v: "2.10.0", date: "2026-10-18", items: ["熔岩噴泉：每團岩漿各自決定散開的高度，有的衝到頂點、有的半途就向旁邊散開回落"] },
   { v: "2.9.9", date: "2026-10-18", items: ["熔岩噴泉改成持續噴湧：先衝到頂的岩漿先散開落下，後面的繼續往上衝，不再整批一起落"] },
@@ -200,8 +201,8 @@ const ACH = [
   { id: "m15", name: "配對快手", desc: "配對消除 15 秒內完成", title: "配對快手", gems: 5, tier: 1, p: () => [S.best.match && S.best.match <= 15 ? 1 : 0, 1] },
   { id: "m10", name: "閃電配對", desc: "字庫選課本 336 字全部課次，配對消除 8 秒內完成", title: "閃電手", gems: 10, tier: 2, p: () => [fb("match") && fb("match") <= 8 ? 1 : 0, 1] },
   { id: "q2500", name: "連擊大師", desc: "快問連擊拿到 1250 分", title: "連擊大師", gems: 5, tier: 1, p: () => [S.best.quiz || 0, 1250] },
-  { id: "q4500", name: "快問之王", desc: "字庫選課本 336 字、全部課次全選，快問連擊拿到 2250 分", title: "快問之王", gems: 12, tier: 2, p: () => [fb("quiz") || 0, 2250] },
-  { id: "q4000", name: "大考快問王", desc: "字庫選大考 4000（Lv1～4 全選），快問連擊拿到 2250 分", title: "大考快問王", gems: 20, tier: 4, p: () => [fb("quiz", "c4000") || 0, 2250] },
+  { id: "q4500", name: "快問之王", desc: "字庫選課本 336 字、全部課次全選，快問連擊拿到 4500 分", title: "快問之王", gems: 12, tier: 2, p: () => [fb("quiz") || 0, 4500] },
+  { id: "q4000", name: "大考快問王", desc: "字庫選大考 4000（Lv1～4 全選），快問連擊拿到 4500 分", title: "大考快問王", gems: 20, tier: 4, p: () => [fb("quiz", "c4000") || 0, 4500] },
   { id: "mbook90", name: "一模熟讀者", desc: "字庫選課本 336 字、全部課次，題數選 50 題，在快問連擊、聽音選義、是非快答、拼字找碴、缺字補完任一模式正確率 90% 以上", title: "一模熟讀者", gems: 40, tier: 3, p: () => [Math.min(90, S.best.m90acc || 0), 90], note: () => `50 題最高正確率 ${S.best.m90acc || 0}%` },
   { id: "mbook", name: "一模滿分腦", desc: "在「一模全字挑戰」一次 336 題全部答對，一題都不能錯", title: "一模滿分腦", gems: 150, tier: 4, icon: "🧠", p: () => [S.best.perfect336 ? 1 : 0, 1] },
   { id: "m4000", name: "四千單通關", desc: "大考 4000 字（Lv1～4）全部考過，第一次作答正確率 90% 以上", title: "四千單達人", gems: 60, tier: 4, p: masteryP("c4000", .9), note: masteryNote("c4000") },
@@ -744,6 +745,7 @@ $("#menu").onclick = e => { const b = e.target.closest(".mode"); if (b) start(b.
 // vs 房間與單人共用，題目都是純資料（id、選項），所以所有人看到一模一樣的題目。
 const MC_KINDS = ["quiz", "hear", "tf", "spot", "blank"];
 const MC_TIME = { tf: 6000 };
+const scopeMul = () => { const n = S.wrongOnly ? 1 : S.bank === "book" ? S.lessons.length : lvSel().length, t = S.bank === "book" ? LESSONS.length : bankMax(); return t > 1 ? 1 + (Math.min(n, t) - 1) / (t - 1) : 1; };   // 範圍加成：選 1 課 ×1，每多一課線性增加，全選 ×2
 const tierPts = f => f < .25 ? 1 : f < .5 ? .5 : f < .75 ? .25 : 0;   // 計時模式的階梯給分：把限時切四等份，依序拿 100%／50%／25%／0%
 const VOW = "aeiou", CON = "bcdfghjklmnpqrstvwxyz";
 function misspell(w) {
@@ -856,7 +858,7 @@ function playMatch(P) {
 function playQuiz(P, vs, kind = "quiz") {
   const BW0 = kind === "all" ? W.filter(x => !x.b) : null;
   const Q = vs ? vs.qs : kind === "all" ? shuffle(BW0).map(x => mkQ("quiz", x, BW0)) : makeQs(kind, P, uni(), nqN(kind)), qs = Q.map(q => W[q.id]);
-  let i = 0, score = 0, combo = 0, right = 0, raf = 0, locked = false, dead = false; const missed = [];
+  let i = 0, score = 0, combo = 0, right = 0, raf = 0, locked = false, dead = false; const missed = [], sm = vs ? 1 : scopeMul();
   openStage(`${topBar("", `<span class="pill">題 <b id="qn">1</b>/${qs.length}</span><span class="pill">分數 <b id="sc">0</b></span>`)}
     ${vs ? `<div class="vsboard" id="vsb"></div>` : ""}
     <div class="timer"><i id="tbar"></i></div><div class="q" id="q"></div><div class="combo" id="cb"></div><div class="opts" id="opts"></div>`);
@@ -913,7 +915,7 @@ function playQuiz(P, vs, kind = "quiz") {
       if (ok) {
         combo++; right++; hit(x); if (!spoken) sayIf(x.w); combo >= 3 ? sfx.combo(combo) : sfx.ok();
         const mul = Math.min(3, 1 + Math.floor(combo / 3) * .5);
-        score += Math.round(100 * tierPts(1 - r) * mul);
+        score += Math.round(100 * tierPts(1 - r) * mul * sm);
         $("#cb").textContent = combo >= 3 ? `${combo} 連擊 ×${mul}` : "";
       } else {
         if (kk >= 0) btns[kk].classList.add("no");
@@ -929,7 +931,7 @@ function playQuiz(P, vs, kind = "quiz") {
 
 /* ---------- 單字隕石 ---------- */
 function playRock(P) {
-  let score = 0, lives = 3, combo = 0, n = 0, dur = 13000, raf = 0, cur = null, t0 = 0, copying = false, last = null; const missed = [], used = new Set();
+  let score = 0, lives = 3, combo = 0, n = 0, dur = 13000, raf = 0, cur = null, t0 = 0, copying = false, last = null; const missed = [], used = new Set(), sm = scopeMul();
   openStage(`${topBar("", `<span class="pill">生命 <b id="lf">♥♥♥</b></span><span class="pill">分數 <b id="sc">0</b></span><span class="pill">速度 <b id="spd">1</b></span>`)}
     <div class="arena" id="ar"><div class="ground"></div></div>
     <div class="msg" id="msg">打出英文後按 Enter</div>
@@ -972,7 +974,7 @@ function playRock(P) {
     }
     if (accept(cur.x).has(v)) {
       cancelAnimationFrame(raf); n++; combo++; hit(cur.x); sfx.boom(); sayIf(cur.x.w);
-      score += Math.round(10 * tierPts((performance.now() - t0) / dur) * Math.min(5, 1 + Math.floor(combo / 3)));
+      score += Math.round(10 * tierPts((performance.now() - t0) / dur) * Math.min(5, 1 + Math.floor(combo / 3)) * sm);
       dur = Math.max(5000, dur - 350); $("#spd").textContent = Math.round(13000 / dur * 10) / 10;
       $("#sc").textContent = score; msg.className = "msg good"; msg.textContent = combo >= 3 ? `${combo} 連擊！` : "擊碎！";
       const el = cur.el; el.classList.add("boom"); setTimeout(() => el.remove(), 350);
