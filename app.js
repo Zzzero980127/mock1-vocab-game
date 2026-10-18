@@ -8,6 +8,7 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.17.1", date: "2026-10-18", items: ["成就系列預覽改成橫排小圖標（普通 ➜ 稀有 ➜ 超稀有…），點圖標下方說明欄切換，不再被截掉"] },
   { v: "2.17.0", date: "2026-10-18", items: ["新增稀有度「超稀有」（稀有與史詩之間）：Lv 20 超稀有、Lv 30 史詩、Lv 40 神話、Lv 50 傳說", "升級越來越難：Lv k 升 Lv k+1 要 300 + 10×(k-1) XP（Lv 20 需 7410 XP、Lv 50 需 26460 XP）"] },
   { v: "2.16.2", date: "2026-10-18", items: ["修正傳說成就卡片的彩虹效果誤蓋住頭像和 DEV 標章"] },
   { v: "2.16.1", date: "2026-10-18", items: ["個人資料的稱號、展示稱號按鈕依稀有度上色（史詩紫、神話金、傳說彩虹），一眼看出哪個比較帥"] },
@@ -774,14 +775,25 @@ $("#achBox").onclick = e => {
   const cb = e.target.closest("[data-cat]"); if (cb) { achCat = cb.dataset.cat; renderAch(); return; }
   const c = e.target.closest("[data-chain]"); if (!c) return;
   const ch = chainsOf(achCat)[+c.dataset.chain]; if (!ch) return;
-  modal(`<h2>成就系列：${esc(ch[0].name)}${ch.length > 1 ? " ➜ …" : ""}</h2><div style="display:flex;flex-direction:column;gap:10px;margin:10px 0">${ch.map((a, i) => {
-    const got = S.ach[a.id], [p, g] = a.p(), t = TIERS[a.tier];
-    return `<div style="border:1.5px solid ${got ? t[1] : "var(--line)"};border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:4px">
-      <div class="bar"><b>第 ${i + 1} 階・${esc(a.name)}</b><span class="tier ${a.tier === 5 ? "rbt" : ""}" style="--tc:${t[1]};color:${t[1]};border:1px solid ${t[1]};border-radius:6px;padding:0 6px;font-size:11px;font-weight:700">${t[0]}</span></div>
-      <small class="muted">${esc(a.desc)}</small>
-      <small>獎勵：稱號「${esc(a.title)}」・<span style="color:var(--gem)">${a.gems} 寶石</span></small>
-      <small class="${got ? "ok" : "muted"}" style="${got ? "color:var(--good);font-weight:700" : ""}">${got ? `✔ 已解鎖 ${got}` : `進度 ${Math.min(p, g)} / ${g}`}</small></div>`; }).join("")}</div>
-    <button class="btn" data-close type="button">關閉</button>`);
+  const k0 = ch.findIndex(a => !S.ach[a.id]), cur = k0 < 0 ? ch.length - 1 : k0;
+  const m = modal(`<div id="chainBox"></div>`), box = m.querySelector("#chainBox");
+  const draw = sel => {
+    const a = ch[sel], got = S.ach[a.id], [p, g] = a.p(), t = TIERS[a.tier];
+    box.innerHTML = `<h2 style="margin:0 0 10px">成就系列</h2>
+      <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px;margin-bottom:12px">${ch.map((x, i) => {
+        const tt = TIERS[x.tier], ok = S.ach[x.id];
+        return (i ? `<span class="muted">➜</span>` : "") + `<button type="button" class="chip" data-step="${i}" aria-pressed="${i === sel}" style="border-color:${tt[1]};display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 10px;${ok ? "" : "opacity:.7"}">
+          <span style="font-size:20px;line-height:1;${ok ? "" : "filter:grayscale(1)"}">${ok ? x.icon || "🏆" : "🔒"}</span><span class="${x.tier === 5 ? "rbt" : ""}" style="font-size:11px;color:${tt[1]}">${tt[0]}</span></button>`; }).join("")}</div>
+      <div style="border:1.5px solid ${got ? t[1] : "var(--line)"};border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px;text-align:left">
+        <div class="bar"><b>第 ${sel + 1} 階・${esc(a.name)}</b><span class="tier ${a.tier === 5 ? "rbt" : ""}" style="--tc:${t[1]};color:${t[1]};border:1px solid ${t[1]};border-radius:6px;padding:0 6px;font-size:11px;font-weight:700">${t[0]}</span></div>
+        <small class="muted">${esc(a.desc)}</small>
+        <small>獎勵：稱號「${esc(a.title)}」・<span style="color:var(--gem)">${a.gems} 寶石</span></small>
+        ${got ? `<small style="color:var(--good);font-weight:700">✔ 已解鎖 ${got}</small>` : `<div class="xpbar"><i style="width:${Math.min(1, p / g) * 100}%"></i></div><small class="muted">進度 ${Math.min(p, g)} / ${g}</small>${a.note ? `<small class="muted">${a.note()}</small>` : ""}`}
+      </div>
+      <button class="btn" data-close type="button" style="margin-top:12px">關閉</button>`;
+  };
+  box.onclick = ev => { const b = ev.target.closest("[data-step]"); if (b) draw(+b.dataset.step); };
+  draw(cur);
 };
 
 /* ---------- 商店 ---------- */

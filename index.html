@@ -252,7 +252,7 @@ th{color:var(--muted);font-weight:600;font-size:13px}
 .ach.got.epic{border-color:transparent;background:linear-gradient(var(--panel),var(--panel)) padding-box,conic-gradient(from var(--a),var(--tc),transparent 25%,var(--tc) 50%,transparent 75%,var(--tc)) border-box;animation:rot 5s linear infinite;box-shadow:0 0 18px color-mix(in srgb,var(--tc) 30%,transparent)}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;z-index:30;max-width:calc(100% - 32px)}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:grid;place-items:center;z-index:20;padding:16px}
-.modal .box{background:var(--panel);border-radius:18px;padding:24px;max-width:360px;width:100%;text-align:center;display:flex;flex-direction:column;gap:10px;animation:pop .35s}
+.modal .box{background:var(--panel);border-radius:18px;padding:24px;max-width:360px;max-height:calc(100vh - 32px);overflow-y:auto;width:100%;text-align:center;display:flex;flex-direction:column;gap:10px;animation:pop .35s}
 @keyframes pop{from{transform:scale(.7);opacity:0}}
 .invite{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:25;background:var(--panel);border:2px solid var(--hot);border-radius:16px;padding:12px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center;width:min(420px,calc(100% - 32px));box-shadow:0 10px 30px rgba(0,0,0,.25)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -323,7 +323,7 @@ th{color:var(--muted);font-weight:600;font-size:13px}
 <script src="words.js?v=6"></script>
 <script src="bankwords.js?v=8"></script>
 <script src="firebase-config.js?v=7"></script>
-<script src="app.js?v=57"></script>
+<script src="app.js?v=59"></script>
 <script type="module" src="online.js?v=21"></script>
 </body>
 </html>
