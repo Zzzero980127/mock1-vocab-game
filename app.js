@@ -8,6 +8,7 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.15.3", date: "2026-10-18", items: ["修正 CPU 飆高／網頁卡頓：手機音效解鎖用的靜音音檔長度為 0 且設成循環，點擊後瀏覽器會無限重播；改成只播一次"] },
   { v: "2.15.2", date: "2026-10-18", items: ["效能：熔岩造型閒置時不再運算、餘燼改 GPU 動畫；星塵／螢火蟲等特效降低光暈成本"] },
   { v: "2.15.1", date: "2026-10-18", items: ["修正星空造型造成的卡頓（開題數選單、切換分頁變慢）：星星漂移改用 GPU 動畫，不再每幀重繪整頁"] },
   { v: "2.18.2", date: "2026-10-18", items: ["修正房間對戰：先打完的人會一直等其他人，不再 90 秒就自動判定勝利；等超過 30 秒會出現「不等了，直接結算」，沒打完的人算未完成、不給獎勵", "房主按開始時，如果對方在別的瀏覽器分頁：分頁標題會閃「對戰開始了」＋提示音；分頁在背景的時間不會算進作答時間"] },
@@ -300,7 +301,7 @@ function unlockAudio() {
     s.buffer = b; s.connect(ac.destination); s.start(0);
     if (!unlockAudio.el) {
       const el = unlockAudio.el = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAABErAAABAAgAZGF0YQAAAAA=");
-      el.loop = true; el.volume = .01; el.play().catch(() => {});
+      el.volume = .01; el.play().catch(() => {});   // 只播一次：這個 WAV 長度是 0，loop 會讓瀏覽器無限重啟、CPU 飆高
     }
     if (ac.state === "running") ["touchstart", "touchend", "pointerdown", "click", "keydown"].forEach(e => document.removeEventListener(e, unlockAudio, true));
   } catch (e) {}
