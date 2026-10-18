@@ -8,6 +8,7 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.19.2", date: "2026-10-18", items: ["商店的造型和頭像改成依價格由低到高排列"] },
   { v: "2.19.1", date: "2026-10-18", items: ["房間大廳：房間裡的人全部離線（超過 2.5 分鐘沒心跳）就自動不再列出，不會再看到沒人的房間"] },
   { v: "2.19.0", date: "2026-10-18", items: ["新增 4 款網頁造型：薄荷、雪夜、夕陽、賽博（賽博用寶石）", "新增 18 個頭像（12 個金幣、6 個寶石）"] },
   { v: "2.18.3", date: "2026-10-18", items: ["排行榜新增「一模全字挑戰」榜（看全部玩家或只看好友的最高分）"] },
@@ -854,10 +855,10 @@ function renderShop() {
   const av = ([a, p, cur]) => `<div class="item ${S.avatar === a ? "on" : ""}"><span class="ico">${a}</span>${btn("av:" + a, p, S.avatar === a, 1, cur)}</div>`;
   $("#shopBox").innerHTML = `<div class="card"><div class="bar"><h2>商店</h2><span class="row"><span class="pill coin">金幣 <b>${S.coins}</b></span><span class="pill gem">寶石 <b>${S.gems}</b></span></span></div>
     <p class="muted" style="margin:0">金幣：玩一場約 5～25，升等送 50 + 10×等級，對戰贏 +40。寶石：每升一級 +1、每 5 級 +5，解鎖成就也會給。稱號要靠成就解鎖。</p></div>` +
-    sec("💎 寶石商店", "稀有頭像與特殊造型", SKINS.filter(s => s.cur === "gem").map(skin).join("") + AVATARS.filter(a => a[2] === "gem").map(av).join("")) +
+    sec("💎 寶石商店", "稀有頭像與特殊造型", SKINS.filter(s => s.cur === "gem").sort((a, b) => a.price - b.price).map(skin).join("") + AVATARS.filter(a => a[2] === "gem").sort((a, b) => a[1] - b[1]).map(av).join("")) +
     sec("遊戲", "解鎖新玩法", MODES.filter(o => o.price).map(o => `<div class="item ${owns("game:" + o.m) ? "on" : ""}"><span class="ico" style="font:400 18px var(--f-display);color:var(--hot)">${o.tag}</span><b>${o.name}</b><small>${o.desc}</small>${btn("game:" + o.m, o.price)}</div>`).join("")) +
-    sec("網頁造型", "換整個網站的配色", SKINS.filter(s => s.cur !== "gem").map(skin).join("")) +
-    sec("頭像", "顯示在名字旁邊", AVATARS.filter(a => a[2] !== "gem").map(av).join(""));
+    sec("網頁造型", "換整個網站的配色", SKINS.filter(s => s.cur !== "gem").sort((a, b) => a.price - b.price).map(skin).join("")) +
+    sec("頭像", "顯示在名字旁邊", AVATARS.filter(a => a[2] !== "gem").sort((a, b) => a[1] - b[1]).map(av).join(""));
 }
 function use(k) {
   const [type, v] = [k.slice(0, k.indexOf(":")), k.slice(k.indexOf(":") + 1)];
