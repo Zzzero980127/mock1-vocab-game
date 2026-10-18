@@ -256,6 +256,9 @@ th{color:var(--muted);font-weight:600;font-size:13px}
 @keyframes pop{from{transform:scale(.7);opacity:0}}
 .invite{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:25;background:var(--panel);border:2px solid var(--hot);border-radius:16px;padding:12px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center;width:min(420px,calc(100% - 32px));box-shadow:0 10px 30px rgba(0,0,0,.25)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.rb,.ach.rb .tier,.ach.rb .plate small,.fx.rb .tierlbl{background:linear-gradient(90deg,#ff4d4d,#ffb020,#f5e642,#3ddc84,#3db8ff,#a56bff,#ff4d4d);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent!important;text-shadow:none!important;animation:rbmove 3s linear infinite}
+.ach.rb .tier{border-color:#ff6ad5}
+@keyframes rbmove{to{background-position:200% 0}}
 </style>
 </head>
 <body class="notranslate" translate="no">
@@ -320,7 +323,7 @@ th{color:var(--muted);font-weight:600;font-size:13px}
 <script src="words.js?v=6"></script>
 <script src="bankwords.js?v=8"></script>
 <script src="firebase-config.js?v=7"></script>
-<script src="app.js?v=50"></script>
+<script src="app.js?v=51"></script>
 <script type="module" src="online.js?v=20"></script>
 </body>
 </html>

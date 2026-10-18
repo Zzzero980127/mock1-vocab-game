@@ -8,6 +8,7 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.14.2", date: "2026-10-18", items: ["成就稀有度顏色調整：史詩紫色、神話金色、傳說彩虹"] },
   { v: "2.14.1", date: "2026-10-18", items: ["成就改名：升到 Lv 20 改叫「二十級霸主」，336 個課本單字全部答對改叫「一模霸主」（原「單字之神」）"] },
   { v: "2.14.0", date: "2026-10-18", items: ["課本字庫分成「一模（一＋二冊）」「第一冊」「第二冊」：點冊別只顯示該冊課次，點「一模」自動選好一、二冊全部課次"] },
   { v: "2.13.0", date: "2026-10-18", items: ["森林造型改成夜森（深綠底），其餘造型加動態背景：森林有螢火蟲、深海有升起的氣泡、霓虹有飄浮的霓虹方塊、黑金有灑落的金粉", "黑金造型價格調成 1000 金幣（已買的不受影響）"] },
@@ -227,7 +228,7 @@ const ACH = [
   { id: "v1", name: "首勝", desc: "對戰贏 1 場", title: "初露鋒芒", gems: 3, tier: 0, p: () => [S.wins || 0, 1] },
   { id: "v10", name: "對戰常勝軍", desc: "對戰贏 10 場", title: "對戰常勝軍", gems: 15, tier: 2, p: () => [S.wins || 0, 10] },
 ];
-const TIERS = [["普通", "var(--muted)"], ["稀有", "var(--cool)"], ["史詩", "var(--hot)"], ["神話", "#c06bff"], ["傳說", "var(--gold)"], ["開發者", "#ff3fa4"]];
+const TIERS = [["普通", "var(--muted)"], ["稀有", "var(--cool)"], ["史詩", "#a56bff"], ["神話", "#ffc83d"], ["傳說", "#ff6ad5"], ["開發者", "#ff3fa4"]];
 const FREE = ["game:match", "game:quiz", "game:spell", "game:hear", "game:tf", "game:flip", "game:all", "skin:default", "av:🙂", "av:🐱", "av:🐶", "title:單字新手"];
 
 const lvOf = xp => Math.floor(xp / 300) + 1;
@@ -586,6 +587,7 @@ const titleHtml = (title, dev) => {
   const a = ACH.find(x => x.title === title && !x.hidden);   // 稱號顏色 = 對應成就的稀有度顏色，神話以上再加光暈
   if (!a || a.tier < 1) return esc(title);
   const c = TIERS[a.tier][1];
+  if (a.tier === 4) return `<span class="rb" style="font-weight:700">${esc(title)}</span>`;
   return `<span style="color:${c};font-weight:700${a.tier >= 3 ? `;text-shadow:0 0 10px ${c}` : ""}">${esc(title)}</span>`;
 };
 function renderTop() {
@@ -701,7 +703,7 @@ function checkAch() {
 }
 function bigAch(a, done) {
   const t = TIERS[a.tier]; sfx.epic();
-  const el = document.createElement("div"); el.className = "fx"; el.style.setProperty("--tc", t[1]);
+  const el = document.createElement("div"); el.className = "fx" + (a.tier === 4 ? " rb" : ""); el.style.setProperty("--tc", t[1]);
   const cols = ["#ffd76b", "#ff8a3d", "#ff3fa4", "#6be3ff", "#b18cff", "#ffffff"];
   const sparks = Array.from({ length: 40 }, (_, i) => {
     const ang = i / 40 * Math.PI * 2 + Math.random() * .3, dist = 140 + Math.random() * 260;
@@ -720,7 +722,7 @@ function popAch() {
   if (a.tier >= 2) return bigAch(a, () => { achQ.shift(); popAch(); });
   sfx.ding();
   const el = document.createElement("div"); el.className = "achpop";
-  el.innerHTML = `<span class="trophy" style="color:${TIERS[a.tier][1]}">🏆</span><span><small>成就解鎖・${TIERS[a.tier][0]}</small><b>${esc(a.name)}</b><small>稱號「${esc(a.title)}」・<span style="color:var(--gem)">+${a.gems} 寶石</span></small></span>`;
+  el.innerHTML = `<span class="trophy${a.tier === 4 ? " rb" : ""}" style="color:${TIERS[a.tier][1]}">🏆</span><span><small>成就解鎖・${TIERS[a.tier][0]}</small><b>${esc(a.name)}</b><small>稱號「${esc(a.title)}」・<span style="color:var(--gem)">+${a.gems} 寶石</span></small></span>`;
   el.onclick = () => showTab("ach");
   document.body.append(el);
   setTimeout(() => { el.remove(); achQ.shift(); popAch(); }, 2800);
@@ -732,7 +734,7 @@ function renderAch() {
     <div class="xpbar"><i style="width:${done / list.length * 100}%"></i></div></div>
     <div class="achs">${list.map(a => {
       const got = S.ach[a.id], [c, g] = a.p(), t = TIERS[a.tier];
-      return `<div class="ach ${got ? "got" : ""} ${got && a.tier >= 2 ? "epic" : ""}" style="--tc:${t[1]}">
+      return `<div class="ach ${got ? "got" : ""} ${got && a.tier >= 2 ? "epic" : ""} ${a.tier === 4 ? "rb" : ""}" style="--tc:${t[1]}">
         <div class="bar"><span class="trophy">${got ? a.icon || "🏆" : "🔒"}</span><span class="tier">${t[0]}</span></div>
         <b>${esc(a.name)}</b><small>${esc(a.desc)}</small>
         <div class="plate"><span class="av">${S.avatar}</span><span><b>${nameHtml(S.name, isMeDev())}</b><small>${a.id === "dev" ? titleHtml(a.title, true) : esc(a.title)}</small></span></div>
