@@ -7,6 +7,10 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.8.1", date: "2026-10-18", items: [
+    "題庫區新增「題數」選單（標準／5／10／20／30／50 題），適用快問連擊、聽音選義、是非快答、拼字找碴、缺字補完、拼字工坊、聽音拼字；題數多分數自然高、題數少分數自然低",
+    "自訂題數時不會更新成就用的全範圍紀錄，避免用短場次或長場次刷成就"
+  ]},
   { v: "2.8.0", date: "2026-10-18", items: [
     "新增 5 種遊戲：聽音選義、是非快答、記憶翻牌（免費），拼字找碴（80 金幣）、缺字補完（100 金幣）",
     "建立房間時可以選遊戲模式：快問連擊、聽音選義、是非快答、拼字找碴、缺字補完，或「綜合」每題隨機換一種；房間裡和大廳都會顯示模式"
@@ -310,8 +314,10 @@ const uni = () => S.bank === "book" ? W.filter(x => !x.b) : W.filter(x => x.b &&
 const lvSel = () => { const m = S.lvs.filter(v => v <= bankMax()); return m.length ? m : [1, 2, 3, 4, 5, 6]; };   // 切字庫後選的級別超出範圍就當全選
 const fullScope = () => !S.wrongOnly && (S.bank === "book" ? LESSONS.every(l => S.lessons.includes(l)) : lvSel().length >= bankMax());
 const bankKey = () => S.bank === "book" ? "book" : "c" + (bankMax() * 1000 || 6000);   // 與字庫對應的紀錄鍵
+const stdN = m => ({ tf: 20, spell: 10, listen: 10 })[m] || 15;   // 各模式的標準題數
+const nqN = m => S.nq || stdN(m);   // S.nq=0 表示標準；自訂題數時分數自然隨題數增減，但不計入成就用的全範圍紀錄
 function recFull(m, v) {   // 字庫全選時另外記一份「全範圍紀錄」，高階成就看這個
-  if (!fullScope()) return; const k = `f_${m}_${bankKey()}`, o = S.best[k];
+  if (!fullScope() || S.nq) return; const k = `f_${m}_${bankKey()}`, o = S.best[k];
   if (o == null || (m === "match" ? v < o : v > o)) S.best[k] = v;
 }
 const fb = (m, k = "book") => S.best[`f_${m}_${k}`];
@@ -445,6 +451,7 @@ $("#chips").onclick = e => {
 };
 $("#wrongOnly").checked = S.wrongOnly; $("#autoSay").checked = S.autoSay;
 $("#wrongOnly").onchange = e => { S.wrongOnly = e.target.checked; save(); hud(); };
+$("#nq").value = S.nq || 0; $("#nq").onchange = e => { S.nq = +e.target.value; save(); toast(S.nq ? `每場 ${S.nq} 題（分數隨題數增減，不計入成就紀錄）` : "回到標準題數"); };
 $("#autoSay").onchange = e => { S.autoSay = e.target.checked; save(); };
 $("#sfx").checked = S.sfx; $("#sfx").onchange = e => { S.sfx = e.target.checked; save(); if (S.sfx) sfx.ok(); };
 // 需要確認的按鈕：第一次按變「再按一次確定」，3 秒內再按才執行
@@ -767,7 +774,7 @@ function playMatch(P) {
 
 /* ---------- 快問連擊（好友對戰也用這個，vs 帶入固定題目與回呼） ---------- */
 function playQuiz(P, vs, kind = "quiz") {
-  const Q = vs ? vs.qs : makeQs(kind, P, uni(), kind === "tf" ? 20 : 15), qs = Q.map(q => W[q.id]);
+  const Q = vs ? vs.qs : makeQs(kind, P, uni(), nqN(kind)), qs = Q.map(q => W[q.id]);
   let i = 0, score = 0, combo = 0, right = 0, raf = 0, locked = false, dead = false; const missed = [];
   openStage(`${topBar("", `<span class="pill">題 <b id="qn">1</b>/${qs.length}</span><span class="pill">分數 <b id="sc">0</b></span>`)}
     ${vs ? `<div class="vsboard" id="vsb"></div>` : ""}
@@ -894,7 +901,7 @@ function playRock(P) {
 
 /* ---------- 拼字工坊 ---------- */
 function playSpell(P) {
-  const qs = pick(P, Math.min(10, P.length), ["w"], true);
+  const qs = pick(P, Math.min(nqN("spell"), P.length), ["w"], true);
   let i = 0, score = 0, right = 0; const missed = [];
   openStage(`${topBar("", `<span class="pill">題 <b id="qn">1</b>/${qs.length}</span><span class="pill">分數 <b id="sc">0</b></span>`)}
     <div class="q" id="q"></div><div class="slots" id="sl"></div><div class="letters" id="lt"></div>
@@ -973,7 +980,7 @@ function playSpell(P) {
 
 /* ---------- 聽音拼字 ---------- */
 function playListen(P) {
-  const qs = pick(P, Math.min(10, P.length), ["w"], true);
+  const qs = pick(P, Math.min(nqN("listen"), P.length), ["w"], true);
   let i = 0, score = 0, right = 0, x, tries, done, dead = false; const missed = [];
   stopFn = () => { dead = true; };
   openStage(`${topBar("", `<span class="pill">題 <b id="qn">1</b>/${qs.length}</span><span class="pill">分數 <b id="sc">0</b></span>`)}
