@@ -3,10 +3,12 @@ const BOOKN = DATA.length;   // 課本單字 id 0..BOOKN-1 永遠不變；大考
 const W = DATA.map((x, i) => ({ ...x, id: i })).concat(typeof BANK === "undefined" ? [] : BANK.map((r, i) => ({ w: r[0], p: r[1], c: r[2], l: "Lv" + r[3], lv: r[3], b: 1, id: BOOKN + i })));
 const $ = s => document.querySelector(s);
 const LESSONS = [...new Set(W.filter(x => !x.b).map(x => x.l))];
+const volL = v => v === "all" ? LESSONS.slice() : LESSONS.filter(l => l[1] === v);   // 依冊別取課次（B1L1 → 第 1 冊）
 const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.14.0", date: "2026-10-18", items: ["課本字庫分成「一模（一＋二冊）」「第一冊」「第二冊」：點冊別只顯示該冊課次，點「一模」自動選好一、二冊全部課次"] },
   { v: "2.13.0", date: "2026-10-18", items: ["森林造型改成夜森（深綠底），其餘造型加動態背景：森林有螢火蟲、深海有升起的氣泡、霓虹有飄浮的霓虹方塊、黑金有灑落的金粉", "黑金造型價格調成 1000 金幣（已買的不受影響）"] },
   { v: "2.12.1", date: "2026-10-18", items: ["修正作者帳號有時認不出來（好友代碼對不上就不算作者）：登入後改用帳號 uid 比對，商店全擁有、DEV 標籤都會正確出現"] },
   { v: "2.12.0", date: "2026-10-18", items: ["排行榜新增「金幣」「寶石」兩個榜", "作者帳號：商店的遊戲、造型、頭像全部直接擁有，商店裡仍顯示原價"] },
@@ -608,9 +610,11 @@ function hud() {
 function renderChips() {
   const bk = BANKS.map(([k, n]) => `<button class="chip" data-bank="${k}" aria-pressed="${S.bank === k}">${n}</button>`).join("") + `<span style="flex-basis:100%"></span>`;
   if (S.bank === "book") {
-    const all = S.lessons.length === LESSONS.length;
-    $("#chips").innerHTML = bk + `<button class="chip" data-l="*" aria-pressed="${all}">全部</button>` +
-      LESSONS.map(l => `<button class="chip" data-l="${l}" aria-pressed="${!all && S.lessons.includes(l)}">${l}</button>`).join("");
+    const vol = S.vol || "all", VL = volL(vol), all = VL.every(l => S.lessons.includes(l));
+    $("#chips").innerHTML = bk +
+      [["all", "一模（一＋二冊）"], ["1", "第一冊"], ["2", "第二冊"]].map(([v, n]) => `<button class="chip" data-vol="${v}" aria-pressed="${vol === v}">${n}</button>`).join("") + `<span style="flex-basis:100%"></span>` +
+      `<button class="chip" data-l="*" aria-pressed="${all}">全部</button>` +
+      VL.map(l => `<button class="chip" data-l="${l}" aria-pressed="${!all && S.lessons.includes(l)}">${l}</button>`).join("");
   } else {
     const LV = Array.from({ length: bankMax() }, (_, i) => i + 1), sel = S.lvs.filter(v => v <= bankMax()), all = sel.length === LV.length;
     $("#chips").innerHTML = bk + `<button class="chip" data-lv="*" aria-pressed="${all}">全部</button>` +
@@ -626,10 +630,12 @@ $("#chips").onclick = e => {
     else { const n = +v; if (sel.length === LV.length) S.lvs = [n]; else { S.lvs = sel.includes(n) ? sel.filter(x => x !== n) : [...sel, n]; if (!S.lvs.length) S.lvs = [1, 2, 3, 4, 5, 6]; } }
     save(); renderChips(); hud(); return;
   }
+  if (t.dataset.vol) { S.vol = t.dataset.vol; S.lessons = volL(S.vol); save(); renderChips(); hud(); return; }
   const l = t.dataset.l; if (!l) return;
-  if (l === "*") S.lessons = LESSONS.slice();
-  else if (S.lessons.length === LESSONS.length) S.lessons = [l];
-  else { S.lessons = S.lessons.includes(l) ? S.lessons.filter(x => x !== l) : [...S.lessons, l]; if (!S.lessons.length) S.lessons = LESSONS.slice(); }
+  const VL = volL(S.vol || "all");
+  if (l === "*") S.lessons = VL.slice();
+  else if (VL.every(x => S.lessons.includes(x))) S.lessons = [l];
+  else { S.lessons = S.lessons.includes(l) ? S.lessons.filter(x => x !== l) : [...S.lessons, l]; if (!S.lessons.length) S.lessons = VL.slice(); }
   save(); renderChips(); hud();
 };
 $("#wrongOnly").checked = S.wrongOnly; $("#autoSay").checked = S.autoSay;
