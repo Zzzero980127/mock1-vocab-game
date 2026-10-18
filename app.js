@@ -7,6 +7,7 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.9.2", date: "2026-10-18", items: ["熔岩造型：畫面左右兩側會不定時有岩漿從底部噴起、再拋物線落下"] },
   { v: "2.9.0", date: "2026-10-18", items: [
     "新增「一模全字挑戰」：課本 336 字一次考完，每字一題（不受課次、字庫設定影響）",
     "「一模滿分腦」改成傳說成就：在全字挑戰一次 336 題全對才拿得到；原本的「90% 熟練度」改名「一模熟讀者」，升為神話級（新增神話稀有度）",
@@ -334,7 +335,38 @@ function pool(filter) {
   if (S.wrongOnly) p = p.filter(x => S.wrong[x.id]);
   return filter ? p.filter(filter) : p;
 }
-function applySkin() { if (S.skin === "default") document.documentElement.removeAttribute("data-skin"); else document.documentElement.dataset.skin = S.skin; auroraCanvas(S.skin === "aurora"); }
+function applySkin() { if (S.skin === "default") document.documentElement.removeAttribute("data-skin"); else document.documentElement.dataset.skin = S.skin; auroraCanvas(S.skin === "aurora"); lavaCanvas(S.skin === "lava"); }
+
+// 熔岩：左右兩側偶爾有岩漿從底部噴起，拋物線落下，留下發光的尾巴（30 幀、粒子數有限）
+let lavaRaf = 0;
+function lavaCanvas(on) {
+  let cv = document.getElementById("lavaCv");
+  if (!on) { cancelAnimationFrame(lavaRaf); lavaRaf = 0; if (cv) cv.remove(); return; }
+  if (lavaRaf) return;
+  if (!cv) { cv = document.createElement("canvas"); cv.id = "lavaCv"; cv.style.cssText = "position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:-1"; document.body.prepend(cv); }
+  const g = cv.getContext("2d"); let w = 0, h = 0, ps = [], next = 400, last = 0;
+  const fit = () => { w = cv.width = innerWidth; h = cv.height = innerHeight; };
+  fit(); addEventListener("resize", fit);
+  const erupt = () => {
+    const left = Math.random() < .5, x0 = left ? w * (.02 + Math.random() * .16) : w * (.82 + Math.random() * .16), n = 22 + Math.random() * 22 | 0, pw = .7 + Math.random() * .6;
+    for (let i = 0; i < n; i++) ps.push({ x: x0 + (Math.random() - .5) * 24, y: h + 6, vx: ((left ? 1 : -1) * Math.random() * 2.2 + (Math.random() - .5) * 2.4), vy: -(h * (.012 + Math.random() * .012)) * pw * (.6 + Math.random() * .6), r: 2 + Math.random() * 3.5, life: 1, tr: [] });
+  };
+  const frame = t => {
+    if (document.documentElement.dataset.skin !== "lava") { lavaCanvas(false); return; }
+    lavaRaf = requestAnimationFrame(frame);
+    if (t - last < 33) return; last = t;
+    if (t > next) { erupt(); next = t + 1800 + Math.random() * 3600; }
+    g.clearRect(0, 0, w, h); g.globalCompositeOperation = "lighter";
+    ps = ps.filter(p => p.y < h + 20 && p.life > 0);
+    for (const p of ps) {
+      p.vy += h * .00085; p.x += p.vx; p.y += p.vy; p.life -= .006; p.tr.push([p.x, p.y]); if (p.tr.length > 7) p.tr.shift();
+      const a = Math.max(0, p.life);
+      for (let k = 0; k < p.tr.length; k++) { const q = p.tr[k], f = (k + 1) / p.tr.length; g.fillStyle = `rgba(255,${90 + 100 * f | 0},30,${.35 * f * a})`; g.beginPath(); g.arc(q[0], q[1], p.r * f, 0, 6.3); g.fill(); }
+      g.fillStyle = `rgba(255,220,120,${.9 * a})`; g.beginPath(); g.arc(p.x, p.y, p.r, 0, 6.3); g.fill();
+    }
+  };
+  lavaRaf = requestAnimationFrame(frame);
+}
 
 // 極光：用 canvas 逐欄畫波浪光幕（下緣亮、往上淡出），形狀隨時間流動
 let auroraRaf = 0;
