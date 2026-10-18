@@ -58,7 +58,7 @@ function loginUI() {
 $("#loginBtn")?.addEventListener("click", e => { e.stopPropagation(); $("#loginMenu").hidden = !$("#loginMenu").hidden; });
 $("#loginMenu")?.addEventListener("click", e => { const b = e.target.closest("[data-lg]"); if (!b) return; $("#loginMenu").hidden = true; b.dataset.lg === "guest" ? loginGuest() : login(); });
 document.addEventListener("click", () => { const m = $("#loginMenu"); if (m) m.hidden = true; });
-const PROGRESS = ["xp", "coins", "gems", "best", "owned", "wrong", "games", "wins", "losses", "name", "avatar", "title", "showT", "skin", "lessons", "vsDay"];
+const PROGRESS = ["xp", "coins", "gems", "best", "owned", "wrong", "games", "wins", "losses", "name", "avatar", "title", "showA", "skin", "lessons", "vsDay"];
 function mergeBest(a = {}, b = {}) {
   const o = { ...a };
   for (const [k, v] of Object.entries(b)) o[k] = o[k] == null ? v : (k === "match" || k.startsWith("f_match")) ? Math.min(o[k], v) : Math.max(o[k], v);
@@ -105,7 +105,7 @@ async function makeCode() {
 function pub() {
   const S = A.S, best = {};
   for (const [k, v] of Object.entries(S.best || {})) if (typeof v === "number") best[k] = v;
-  return { name: S.name, avatar: S.avatar, title: S.title, showT: A.showT(), skin: S.skin, xp: S.xp, level: A.lvOf(S.xp), coins: S.coins, best,
+  return { name: S.name, avatar: S.avatar, title: S.title, showA: A.showA(), skin: S.skin, xp: S.xp, level: A.lvOf(S.xp), coins: S.coins, best,
     owned: S.owned, wrong: S.wrong, lessons: S.lessons, games: S.games || 0, wins: S.wins || 0, losses: S.losses || 0,
     gems: S.gems || 0, ach: S.ach || {}, achN: Object.keys(S.ach || {}).length, known: S.known || {}, first: S.first || {}, vsDay: S.vsDay || null, joined: S.joined || "",
     code: S.code || "", lastSeen: F.serverTimestamp(), updatedAt: F.serverTimestamp() };
@@ -575,7 +575,7 @@ function renderVs(box) {
     <div class="card"><div class="bar"><h2>好友（${list.length}）</h2><span class="status on"><i></i>${onlineN} 人在線</span></div>
       <p class="muted" style="margin:0">開好房間後，在房間裡就能邀請好友。</p>
       <div class="list">${list.length ? list.map(([id, d]) => `<div class="person"><span class="av">${esc(d.avatar || "🙂")}</span>
-        <div class="info"><b>${A.nameHtml(d.name || "玩家", id === devUid)}</b><small>${A.titleHtml(d.title || "", id === devUid)}・Lv ${A.lvOf(d.xp || 0)}・</small>${statusHtml(d)}${d.showT?.length ? `<br><small>${A.showcaseHtml(d.showT, id === devUid)}</small>` : ""}</div>
+        <div class="info"><b>${A.nameHtml(d.name || "玩家", id === devUid)}</b><small>${A.titleHtml(d.title || "", id === devUid)}・Lv ${A.lvOf(d.xp || 0)}・</small>${statusHtml(d)}${d.showA?.length ? `<br><small>${A.showcaseHtml(d.showA, id === devUid)}</small>` : ""}</div>
         <button class="btn small ghost" data-del="${id}" type="button" aria-label="刪除好友">✕</button></div>`).join("")
         : `<p class="muted">還沒有好友，輸入朋友的代碼加一個吧。</p>`}</div></div>`;
   box.onclick = e => {
@@ -626,7 +626,7 @@ async function renderRank(box) {
   } catch (e) { console.error(e); const l = $("#rkList"); if (l) l.innerHTML = `<p class="muted">讀取排行榜失敗（${esc(e.code || e.message)}）</p>`; return; }
   const l = $("#rkList"); if (!l || rankCat !== cat) return;
   l.innerHTML = rows.length ? rows.map(([id, d], i) => `<div class="person ${id === user.uid ? "me-row" : ""}"><span class="rank r${i + 1}">${i + 1}</span><span class="av">${esc(d.avatar || "🙂")}</span>
-    <div class="info"><b>${A.nameHtml(d.name || "玩家", id === devUid)}${id === user.uid ? "（我）" : ""}</b><small>${A.titleHtml(d.title || "", id === devUid)}${d.joined ? `・${d.joined} 加入` : ""}</small>${d.showT?.length ? `<br><small>${A.showcaseHtml(d.showT, id === devUid)}</small>` : ""}</div><span class="score">${fmt(cat, d)}</span></div>`).join("")
+    <div class="info"><b>${A.nameHtml(d.name || "玩家", id === devUid)}${id === user.uid ? "（我）" : ""}</b><small>${A.titleHtml(d.title || "", id === devUid)}${d.joined ? `・${d.joined} 加入` : ""}</small>${d.showA?.length ? `<br><small>${A.showcaseHtml(d.showA, id === devUid)}</small>` : ""}</div><span class="score">${fmt(cat, d)}</span></div>`).join("")
     : `<p class="muted">還沒有人有這項紀錄，快去玩一場搶第一！</p>`;
 }
 
