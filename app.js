@@ -7,6 +7,7 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.9.4", date: "2026-10-18", items: ["熔岩噴發改成液體感的岩漿柱：噴得更高（約半個畫面以上），一坨一坨融在一起，不再是零散的小點"] },
   { v: "2.9.3", date: "2026-10-18", items: ["「一模熟讀者」改成：字庫選課本 336 字、全部課次、題數 50 題，在選擇題類模式（快問連擊、聽音選義、是非快答、拼字找碴、缺字補完）正確率 90% 以上"] },
   { v: "2.9.2", date: "2026-10-18", items: ["熔岩造型：畫面左右兩側會不定時有岩漿從底部噴起、再拋物線落下"] },
   { v: "2.9.0", date: "2026-10-18", items: [
@@ -338,37 +339,42 @@ function pool(filter) {
 }
 function applySkin() { if (S.skin === "default") document.documentElement.removeAttribute("data-skin"); else document.documentElement.dataset.skin = S.skin; auroraCanvas(S.skin === "aurora"); lavaCanvas(S.skin === "lava"); }
 
-// 熔岩：左右兩側偶爾有岩漿從底部噴起，拋物線落下，留下發光的尾巴（30 幀、粒子數有限）
+// 熔岩：左右兩側偶爾有岩漿噴泉從底部衝起。每側一張窄 canvas，用 SVG goo 濾鏡把一堆圓點融成一整坨液體（30 幀、面積小才不吃效能）
 let lavaRaf = 0;
 function lavaCanvas(on) {
-  let cv = document.getElementById("lavaCv");
-  if (!on) { cancelAnimationFrame(lavaRaf); lavaRaf = 0; if (cv) cv.remove(); return; }
+  const old = [...document.querySelectorAll(".lavaCv, #lavaGoo")];
+  if (!on) { cancelAnimationFrame(lavaRaf); lavaRaf = 0; old.forEach(e => e.remove()); return; }
   if (lavaRaf) return;
-  if (!cv) { cv = document.createElement("canvas"); cv.id = "lavaCv"; cv.style.cssText = "position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:-1"; document.body.prepend(cv); }
-  const g = cv.getContext("2d"); let w = 0, h = 0, ps = [], next = 400, last = 0;
-  const fit = () => { w = cv.width = innerWidth; h = cv.height = innerHeight; };
+  old.forEach(e => e.remove());
+  document.body.insertAdjacentHTML("afterbegin", `<svg id="lavaGoo" width="0" height="0" style="position:absolute"><filter id="goo" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="7"/><feColorMatrix values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 26 -11"/></filter></svg>`);
+  const W_ = 340, sides = [-1, 1].map(d => {   // d=-1 左側、1 右側
+    const cv = document.createElement("canvas"); cv.className = "lavaCv";
+    cv.style.cssText = `position:fixed;top:0;${d < 0 ? "left" : "right"}:0;width:${W_}px;height:100%;pointer-events:none;z-index:-1;filter:url(#goo)`;
+    document.body.prepend(cv); return { d, cv, g: cv.getContext("2d"), ps: [], emit: 0, P: 0, x0: 0, nextAt: 0 };
+  });
+  let h = 0, last = 0, gr = 0;
+  const fit = () => { h = innerHeight; sides.forEach(o => { o.cv.width = W_; o.cv.height = h; }); gr = h * .0009; };
   fit(); addEventListener("resize", fit);
-  const erupt = () => {
-    const left = Math.random() < .5, x0 = left ? w * (.02 + Math.random() * .16) : w * (.82 + Math.random() * .16), n = 22 + Math.random() * 22 | 0, pw = .7 + Math.random() * .6;
-    for (let i = 0; i < n; i++) ps.push({ x: x0 + (Math.random() - .5) * 24, y: h + 6, vx: ((left ? 1 : -1) * Math.random() * 2.2 + (Math.random() - .5) * 2.4), vy: -(h * (.012 + Math.random() * .012)) * pw * (.6 + Math.random() * .6), r: 2 + Math.random() * 3.5, life: 1, tr: [] });
-  };
+  const t0 = performance.now(); sides[0].nextAt = t0 + 800; sides[1].nextAt = t0 + 2600;
   const frame = t => {
     if (document.documentElement.dataset.skin !== "lava") { lavaCanvas(false); return; }
     lavaRaf = requestAnimationFrame(frame);
     if (t - last < 33) return; last = t;
-    if (t > next) { erupt(); next = t + 1800 + Math.random() * 3600; }
-    g.clearRect(0, 0, w, h); g.globalCompositeOperation = "lighter";
-    ps = ps.filter(p => p.y < h + 20 && p.life > 0);
-    for (const p of ps) {
-      p.vy += h * .00085; p.x += p.vx; p.y += p.vy; p.life -= .006; p.tr.push([p.x, p.y]); if (p.tr.length > 7) p.tr.shift();
-      const a = Math.max(0, p.life);
-      for (let k = 0; k < p.tr.length; k++) { const q = p.tr[k], f = (k + 1) / p.tr.length; g.fillStyle = `rgba(255,${90 + 100 * f | 0},30,${.35 * f * a})`; g.beginPath(); g.arc(q[0], q[1], p.r * f, 0, 6.3); g.fill(); }
-      g.fillStyle = `rgba(255,220,120,${.9 * a})`; g.beginPath(); g.arc(p.x, p.y, p.r, 0, 6.3); g.fill();
+    for (const o of sides) {
+      if (t > o.nextAt && !o.emit) { o.emit = 22 + Math.random() * 14 | 0; o.P = h * (.45 + Math.random() * .4); o.x0 = o.d < 0 ? 30 + Math.random() * 90 : W_ - 30 - Math.random() * 90; o.nextAt = t + 3500 + Math.random() * 5000; }
+      if (o.emit) { o.emit--; for (let i = 0; i < 3; i++) { const P = o.P * (.55 + Math.random() * .45); o.ps.push({ x: o.x0 + (Math.random() - .5) * 26, y: h + 24, vx: -o.d * (.15 + Math.random() * 1.5) + (Math.random() - .5) * .8, vy: -Math.sqrt(2 * gr * P), r: 10 + Math.random() * 9 }); } }
+      const g = o.g; g.clearRect(0, 0, W_, h);
+      o.ps = o.ps.filter(p => p.y < h + 40);
+      for (const p of o.ps) {
+        p.vy += gr; p.x += p.vx; p.y += p.vy; p.r *= .994;
+        const gd = g.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);   // 中心偏黃、邊緣橘紅
+        gd.addColorStop(0, "#ffe08a"); gd.addColorStop(.55, "#ff9a2e"); gd.addColorStop(1, "#ff4a14");
+        g.fillStyle = gd; g.beginPath(); g.arc(p.x, p.y, p.r, 0, 6.3); g.fill();
+      }
     }
   };
   lavaRaf = requestAnimationFrame(frame);
 }
-
 // 極光：用 canvas 逐欄畫波浪光幕（下緣亮、往上淡出），形狀隨時間流動
 let auroraRaf = 0;
 function auroraCanvas(on) {
