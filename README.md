@@ -20,3 +20,10 @@
 4. Build → Firestore Database → 建立資料庫（位置選 asia-east1 台灣）→ 正式版模式。
 5. Firestore → 規則 → 把 `firestore.rules` 的內容整段貼上 → 發布。
 6. 專案設定（齒輪）→ 一般 → 你的應用程式 → 新增網頁應用程式 `</>` → 複製 firebaseConfig，貼到 `firebase-config.js`。
+
+## 資料來源與授權聲明
+- 本專案為非營利、免費的個人學習專案，與出版社及任何官方機構無關。
+- 課本單字：僅收單字、詞性與中文釋義，不含課文與例句。
+- 大考單字：大學入學考試中心「高中英文參考詞彙表」。
+- 中文釋義：[ECDICT](https://github.com/skywind3000/ECDICT)（MIT License），已轉為繁體。
+- 發音使用瀏覽器內建語音，音效由 Web Audio 即時合成。
