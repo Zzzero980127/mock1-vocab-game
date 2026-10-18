@@ -7,6 +7,7 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.11.0", date: "2026-10-18", items: ["計時模式改成階梯給分：把限時切成四等份，依序拿 100%／50%／25%／0% 的分數（連擊倍率照舊）。快問連擊、聽音選義、拼字找碴、缺字補完限時改 20 秒（是非快答仍 6 秒），單字隕石依擊碎時機拿 10／5／3／0 分", "分數整體變低，成就門檻同步調整：連擊大師 1250、快問之王／大考快問王 2250、隕石獵人 200、隕石毀滅者 400"] },
   { v: "2.10.0", date: "2026-10-18", items: ["熔岩噴泉：每團岩漿各自決定散開的高度，有的衝到頂點、有的半途就向旁邊散開回落"] },
   { v: "2.9.9", date: "2026-10-18", items: ["熔岩噴泉改成持續噴湧：先衝到頂的岩漿先散開落下，後面的繼續往上衝，不再整批一起落"] },
   { v: "2.9.8", date: "2026-10-18", items: ["熔岩噴泉的岩漿柱加粗"] },
@@ -147,7 +148,7 @@ const CHANGELOG = [
 // ---------- 商品 ----------
 const MODES = [
   { m: "match", tag: "MATCH", name: "配對消除", desc: "英文和中文配成一對，越快越好，配錯加罰 1 秒。", price: 0 },
-  { m: "quiz", tag: "COMBO", name: "快問連擊", desc: "15 題四選一、限時 10 秒，連續答對分數加倍。", price: 0 },
+  { m: "quiz", tag: "COMBO", name: "快問連擊", desc: "15 題四選一、限時 20 秒，越快答對分數越高，連續答對分數加倍。", price: 0 },
   { m: "spell", tag: "SPELL", name: "拼字工坊", desc: "看中文，用打亂的字母拼出單字，可用鍵盤直接打。", price: 0 },
   { m: "rock", tag: "METEOR", name: "單字隕石", desc: "中文隕石往下掉，打出英文擊碎它。掉到地上要抄一次答案。", price: 100 },
   { m: "hear", tag: "HEAR", name: "聽音選義", desc: "只聽發音，從四個中文裡選出意思。耳朵練習、不用拼字。", price: 0 },
@@ -198,17 +199,17 @@ const ACH = [
   { id: "wall", name: "單字之神", desc: "336 個課本單字全部答對過", title: "單字之神", gems: 30, tier: 4, p: () => [Object.keys(S.known || {}).filter(i => i < BOOKN).length, BOOKN] },
   { id: "m15", name: "配對快手", desc: "配對消除 15 秒內完成", title: "配對快手", gems: 5, tier: 1, p: () => [S.best.match && S.best.match <= 15 ? 1 : 0, 1] },
   { id: "m10", name: "閃電配對", desc: "字庫選課本 336 字全部課次，配對消除 8 秒內完成", title: "閃電手", gems: 10, tier: 2, p: () => [fb("match") && fb("match") <= 8 ? 1 : 0, 1] },
-  { id: "q2500", name: "連擊大師", desc: "快問連擊拿到 2500 分", title: "連擊大師", gems: 5, tier: 1, p: () => [S.best.quiz || 0, 2500] },
-  { id: "q4500", name: "快問之王", desc: "字庫選課本 336 字、全部課次全選，快問連擊拿到 4500 分", title: "快問之王", gems: 12, tier: 2, p: () => [fb("quiz") || 0, 4500] },
-  { id: "q4000", name: "大考快問王", desc: "字庫選大考 4000（Lv1～4 全選），快問連擊拿到 4500 分", title: "大考快問王", gems: 20, tier: 4, p: () => [fb("quiz", "c4000") || 0, 4500] },
+  { id: "q2500", name: "連擊大師", desc: "快問連擊拿到 1250 分", title: "連擊大師", gems: 5, tier: 1, p: () => [S.best.quiz || 0, 1250] },
+  { id: "q4500", name: "快問之王", desc: "字庫選課本 336 字、全部課次全選，快問連擊拿到 2250 分", title: "快問之王", gems: 12, tier: 2, p: () => [fb("quiz") || 0, 2250] },
+  { id: "q4000", name: "大考快問王", desc: "字庫選大考 4000（Lv1～4 全選），快問連擊拿到 2250 分", title: "大考快問王", gems: 20, tier: 4, p: () => [fb("quiz", "c4000") || 0, 2250] },
   { id: "mbook90", name: "一模熟讀者", desc: "字庫選課本 336 字、全部課次，題數選 50 題，在快問連擊、聽音選義、是非快答、拼字找碴、缺字補完任一模式正確率 90% 以上", title: "一模熟讀者", gems: 40, tier: 3, p: () => [Math.min(90, S.best.m90acc || 0), 90], note: () => `50 題最高正確率 ${S.best.m90acc || 0}%` },
   { id: "mbook", name: "一模滿分腦", desc: "在「一模全字挑戰」一次 336 題全部答對，一題都不能錯", title: "一模滿分腦", gems: 150, tier: 4, icon: "🧠", p: () => [S.best.perfect336 ? 1 : 0, 1] },
   { id: "m4000", name: "四千單通關", desc: "大考 4000 字（Lv1～4）全部考過，第一次作答正確率 90% 以上", title: "四千單達人", gems: 60, tier: 4, p: masteryP("c4000", .9), note: masteryNote("c4000") },
   { id: "m6000", name: "六千單宗師", desc: "大考 6000 字（Lv1～6）全部考過，第一次作答正確率 90% 以上", title: "六千單宗師", gems: 120, tier: 4, p: masteryP("c6000", .9), note: masteryNote("c6000") },
-  { id: "r300", name: "隕石獵人", desc: "單字隕石拿到 300 分", title: "隕石獵人", gems: 6, tier: 1, p: () => [S.best.rock || 0, 300] },
+  { id: "r300", name: "隕石獵人", desc: "單字隕石拿到 200 分", title: "隕石獵人", gems: 6, tier: 1, p: () => [S.best.rock || 0, 200] },
   { id: "s250", name: "拼字工匠", desc: "拼字工坊拿到 250 分", title: "拼字工匠", gems: 6, tier: 1, p: () => [S.best.spell || 0, 250] },
   { id: "l250", name: "順風耳", desc: "字庫選課本 336 字全部課次，聽音拼字 10 題全部一次聽對（250 分）", title: "聽力王", gems: 10, tier: 2, p: () => [fb("listen") || 0, 250] },
-  { id: "r600", name: "隕石毀滅者", desc: "字庫選課本 336 字全部課次，單字隕石拿到 600 分", title: "隕石毀滅者", gems: 12, tier: 2, p: () => [fb("rock") || 0, 600] },
+  { id: "r600", name: "隕石毀滅者", desc: "字庫選課本 336 字全部課次，單字隕石拿到 400 分", title: "隕石毀滅者", gems: 12, tier: 2, p: () => [fb("rock") || 0, 400] },
   { id: "s250f", name: "拼字大師", desc: "字庫選課本 336 字全部課次，拼字工坊拿到滿分 250", title: "拼字大師", gems: 12, tier: 2, p: () => [fb("spell") || 0, 250] },
   { id: "l4000", name: "大考順風耳", desc: "字庫選大考 4000（Lv1～4 全選），聽音拼字 10 題全部一次聽對", title: "大考順風耳", gems: 25, tier: 4, p: () => [fb("listen", "c4000") || 0, 250] },
   { id: "s4000", name: "大考拼字王", desc: "字庫選大考 4000（Lv1～4 全選），拼字工坊拿到滿分 250", title: "大考拼字王", gems: 25, tier: 4, p: () => [fb("spell", "c4000") || 0, 250] },
@@ -743,6 +744,7 @@ $("#menu").onclick = e => { const b = e.target.closest(".mode"); if (b) start(b.
 // vs 房間與單人共用，題目都是純資料（id、選項），所以所有人看到一模一樣的題目。
 const MC_KINDS = ["quiz", "hear", "tf", "spot", "blank"];
 const MC_TIME = { tf: 6000 };
+const tierPts = f => f < .25 ? 1 : f < .5 ? .5 : f < .75 ? .25 : 0;   // 計時模式的階梯給分：把限時切四等份，依序拿 100%／50%／25%／0%
 const VOW = "aeiou", CON = "bcdfghjklmnpqrstvwxyz";
 function misspell(w) {
   const a = w.toLowerCase().split(""), out = new Set(), n = a.length;
@@ -899,7 +901,7 @@ function playQuiz(P, vs, kind = "quiz") {
     if (spoken) $("#replay").onclick = replayFn;
     $("#opts").innerHTML = texts.map((t, j) => `<button class="opt ${cls}" data-k="${j}"><kbd>${j + 1}</kbd>${esc(t)}</button>`).join("");
     if (k === "hear" || k === "tf") speak(x.w); else if (enQ) sayIf(x.w);
-    const t0 = performance.now(), T = MC_TIME[k] || 10000;
+    const t0 = performance.now(), T = MC_TIME[k] || 20000;
     let beep = 3;
     const tick = () => { const r = 1 - (performance.now() - t0) / T; if (r * 10 < beep && beep > 0) { beep--; sfx.warn(); } $("#tbar").style.width = Math.max(0, r) * 100 + "%"; if (r <= 0) answer(-1, 0); else raf = requestAnimationFrame(tick); };
     raf = requestAnimationFrame(tick);
@@ -911,7 +913,7 @@ function playQuiz(P, vs, kind = "quiz") {
       if (ok) {
         combo++; right++; hit(x); if (!spoken) sayIf(x.w); combo >= 3 ? sfx.combo(combo) : sfx.ok();
         const mul = Math.min(3, 1 + Math.floor(combo / 3) * .5);
-        score += Math.round((100 + r * 100) * mul);
+        score += Math.round(100 * tierPts(1 - r) * mul);
         $("#cb").textContent = combo >= 3 ? `${combo} 連擊 ×${mul}` : "";
       } else {
         if (kk >= 0) btns[kk].classList.add("no");
@@ -970,7 +972,7 @@ function playRock(P) {
     }
     if (accept(cur.x).has(v)) {
       cancelAnimationFrame(raf); n++; combo++; hit(cur.x); sfx.boom(); sayIf(cur.x.w);
-      score += 10 * Math.min(5, 1 + Math.floor(combo / 3));
+      score += Math.round(10 * tierPts((performance.now() - t0) / dur) * Math.min(5, 1 + Math.floor(combo / 3)));
       dur = Math.max(5000, dur - 350); $("#spd").textContent = Math.round(13000 / dur * 10) / 10;
       $("#sc").textContent = score; msg.className = "msg good"; msg.textContent = combo >= 3 ? `${combo} 連擊！` : "擊碎！";
       const el = cur.el; el.classList.add("boom"); setTimeout(() => el.remove(), 350);
