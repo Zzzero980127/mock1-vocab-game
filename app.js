@@ -8,6 +8,7 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.22.4", date: "2026-10-18", items: ["一模全字挑戰計分調整：範圍加成固定 ×2（不再受選課影響）、答得慢最少拿一半分，錯題數差不多時分數不會差太多"] },
   { v: "2.22.3", date: "2026-10-18", items: ["稀有成就的顏色固定為綠色（以前跟著網頁造型變色，海納百川造型下變成黃色）"] },
   { v: "2.22.2", date: "2026-10-18", items: ["「一模熟讀者」改成題數選 100 題、正確率 90% 以上（原本 50 題）；舊的 50 題正確率不再計入，要重打"] },
   { v: "2.22.1", date: "2026-10-18", items: ["一模全字挑戰：題目固定為「看英文、選中文」（以前會隨機出中文選英文）"] },
@@ -1167,7 +1168,7 @@ const hidNow = () => hidTotal + (hidSince ? performance.now() - hidSince : 0);
 function playQuiz(P, vs, kind = "quiz") {
   const BW0 = kind === "all" ? W.filter(x => !x.b) : null;
   const Q = vs ? vs.qs : kind === "all" ? shuffle(BW0).map(x => mkQ("quiz", x, BW0, true)) : makeQs(kind, P, uni(), nqN(kind)), qs = Q.map(q => W[q.id]);
-  let i = 0, score = 0, combo = 0, right = 0, raf = 0, locked = false, dead = false; const missed = [], sm = vs ? 1 : scopeMul();
+  let i = 0, score = 0, combo = 0, right = 0, raf = 0, locked = false, dead = false; const missed = [], sm = vs ? 1 : kind === "all" ? 2 : scopeMul();
   openStage(`${topBar("", `<span class="pill">題 <b id="qn">1</b>/${qs.length}</span><span class="pill">分數 <b id="sc">0</b></span>`)}
     ${vs ? `<div class="vsboard" id="vsb"></div>` : ""}
     <div class="timer"><i id="tbar"></i></div><div class="q" id="q"></div><div class="combo" id="cb"></div><div class="opts" id="opts"></div>`);
@@ -1224,7 +1225,7 @@ function playQuiz(P, vs, kind = "quiz") {
       if (ok) {
         combo++; right++; hit(x); if (!spoken) sayIf(x.w); combo >= 3 ? sfx.combo(combo) : sfx.ok();
         const mul = Math.min(3, 1 + Math.floor(combo / 3) * .5);
-        score += Math.round(100 * tierPts(1 - r) * mul * sm);
+        score += Math.round(100 * (kind === "all" ? Math.max(.5, tierPts(1 - r)) : tierPts(1 - r)) * mul * sm);
         $("#cb").textContent = combo >= 3 ? `${combo} 連擊 ×${mul}` : "";
       } else {
         if (kk >= 0) btns[kk].classList.add("no");
