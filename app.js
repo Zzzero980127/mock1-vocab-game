@@ -8,6 +8,7 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.23.0", date: "2026-10-18", items: ["成就改成完整成長鏈：普通→稀有→超稀有→史詩→神話→傳說。「單字狂熱」降為超稀有，後面新增 500／1000／2000 場；答對單字、好友、對戰勝場、金幣、寶石也都一路加到傳說", "「對戰常勝軍」降為稀有，後面加 30／60／100／200 勝", "新增神話限定背景「黃金日冕」（升到 Lv 40）和傳說限定背景「創世星環」（升到 Lv 50，比神話更華麗）；海納百川仍是傳說限定背景"] },
   { v: "2.22.5", date: "2026-10-18", items: ["四選一的選項改成固定 2×2 排列（1 2 在上、3 4 在下）"] },
   { v: "2.22.4", date: "2026-10-18", items: ["一模全字挑戰計分調整：範圍加成固定 ×2（不再受選課影響）、答得慢最少拿一半分，錯題數差不多時分數不會差太多"] },
   { v: "2.22.3", date: "2026-10-18", items: ["稀有成就的顏色固定為綠色（以前跟著網頁造型變色，海納百川造型下變成黃色）"] },
@@ -212,6 +213,8 @@ const SKINS = [
   { k: "snow", name: "雪夜", desc: "深藍夜空，雪花飄落", price: 180, sw: ["#0c1624", "#7cc6ff", "#b9a8ff"] },
   { k: "sunset", name: "夕陽", desc: "漸層天空與緩緩起伏的落日", price: 250, sw: ["#6b2447", "#ff7b54", "#ffb36b"] },
   { k: "river", name: "海納百川", desc: "百川匯流入海，水面緩緩流動", ach: "shopall", sw: ["#06222b", "#35d6c8", "#5aa9ff"] },
+  { k: "myth", name: "黃金日冕", desc: "神話限定：旋轉的黃金光芒與飄落金粉", ach: "lv40", sw: ["#120d03", "#ffc83d", "#ffe9a0"] },
+  { k: "legend", name: "創世星環", desc: "傳說限定：虹彩星環雙向旋轉、星海流轉", ach: "lv50", sw: ["#05030f", "#ff5fd2", "#5cf0ff"] },
   { k: "cyber", name: "賽博", desc: "霓虹網格與掃描線", price: 12, cur: "gem", sw: ["#070b1a", "#00e5ff", "#ff2bd6"] },
 ];
 const AVATARS = [["🙂", 0], ["🐱", 0], ["🐶", 0], ["🐰", 30], ["🐸", 30], ["🐧", 40], ["🦊", 50], ["🐼", 50], ["🐯", 60], ["🦉", 60], ["🐙", 80], ["🦄", 120], ["🐲", 150], ["🚀", 150], ["👑", 10000],
@@ -238,14 +241,21 @@ const ACH = [
   { id: "welcome", name: "歡迎加入", desc: "登入遊樂場（Google 或遊客）", title: "新進玩家", gems: 5, tier: 0, p: () => [S.joined ? 1 : 0, 1] },
   { id: "g10", name: "小試身手", desc: "玩 10 場遊戲", title: "熱身完畢", gems: 2, tier: 0, p: () => [S.games, 10] },
   { id: "g50", name: "遊樂場常客", desc: "玩 50 場遊戲", title: "遊樂場常客", gems: 5, tier: 1, p: () => [S.games, 50] },
-  { id: "g200", name: "單字狂熱", desc: "玩 200 場遊戲", title: "單字狂熱者", gems: 15, tier: 3, p: () => [S.games, 200] },
+  { id: "g200", name: "單字狂熱", desc: "玩 200 場遊戲", title: "單字狂熱者", gems: 15, tier: 2, p: () => [S.games, 200] },
+  { id: "g500", name: "不眠不休", desc: "玩 500 場遊戲", title: "不眠玩家", gems: 25, tier: 3, icon: "🌙", p: () => [S.games, 500] },
+  { id: "g1000", name: "千場鬥士", desc: "玩 1000 場遊戲", title: "千場鬥士", gems: 50, tier: 4, icon: "⚔️", p: () => [S.games, 1000] },
+  { id: "g2000", name: "遊樂場主宰", desc: "玩 2000 場遊戲", title: "遊樂場主宰", gems: 100, tier: 5, icon: "🎪", p: () => [S.games, 2000] },
   { id: "lv5", name: "漸入佳境", desc: "升到 Lv 5", title: "漸入佳境", gems: 3, tier: 0, p: () => [lvOf(S.xp), 5] },
   { id: "lv10", name: "十全十美", desc: "升到 Lv 10", title: "十級玩家", gems: 8, tier: 1, p: () => [lvOf(S.xp), 10] },
   { id: "lv20", name: "二十級霸主", desc: "升到 Lv 20", title: "二十級霸主", gems: 20, tier: 2, p: () => [lvOf(S.xp), 20] },
   { id: "lv30", name: "三十級老手", desc: "升到 Lv 30", title: "三十級老手", gems: 30, tier: 3, p: () => [lvOf(S.xp), 30] },
-  { id: "lv40", name: "四十級傳奇", desc: "升到 Lv 40", title: "四十級傳奇", gems: 60, tier: 4, p: () => [lvOf(S.xp), 40] },
-  { id: "lv50", name: "五十級至尊", desc: "升到 Lv 50", title: "五十級至尊", gems: 120, tier: 5, p: () => [lvOf(S.xp), 50] },
+  { id: "lv40", name: "四十級傳奇", desc: "升到 Lv 40", title: "四十級傳奇", gems: 60, tier: 4, skin: "myth", p: () => [lvOf(S.xp), 40] },
+  { id: "lv50", name: "五十級至尊", desc: "升到 Lv 50", title: "五十級至尊", gems: 120, tier: 5, skin: "legend", p: () => [lvOf(S.xp), 50] },
   { id: "w100", name: "百字斬", desc: "答對過 100 個不同的單字", title: "百字斬", gems: 5, tier: 1, p: () => [knownN(), 100] },
+  { id: "w300", name: "三百字通", desc: "答對過 300 個不同的單字", title: "三百字通", gems: 12, tier: 2, icon: "📝", p: () => [knownN(), 300] },
+  { id: "w1000", name: "千字博士", desc: "答對過 1000 個不同的單字", title: "千字博士", gems: 25, tier: 3, icon: "🎓", p: () => [knownN(), 1000] },
+  { id: "w2500", name: "字海無涯", desc: "答對過 2500 個不同的單字", title: "字海行者", gems: 50, tier: 4, icon: "🌊", p: () => [knownN(), 2500] },
+  { id: "w5000", name: "活字典", desc: "答對過 5000 個不同的單字", title: "活字典", gems: 100, tier: 5, icon: "📖", p: () => [knownN(), 5000] },
   { id: "wall", name: "一模霸主", desc: "336 個一模課本單字全部答對過", title: "一模霸主", gems: 15, tier: 3, p: () => [Object.keys(S.known || {}).filter(i => i < BOOKN).length, BOOKN] },
   { id: "m15", name: "配對快手", desc: "配對消除 15 秒內完成", title: "配對快手", gems: 5, tier: 1, p: () => [S.best.match && S.best.match <= 15 ? 1 : 0, 1] },
   { id: "m10", name: "閃電配對", desc: "字庫選課本 336 字全部課次，配對消除 8 秒內完成", title: "閃電手", gems: 10, tier: 3, p: () => [fb("match") && fb("match") <= 8 ? 1 : 0, 1] },
@@ -265,18 +275,28 @@ const ACH = [
   { id: "s4000", name: "大考拼字王", desc: "字庫選大考 4000（Lv1～4 全選），拼字工坊拿到滿分 250", title: "大考拼字王", gems: 25, tier: 5, p: () => [fb("spell", "c4000") || 0, 250] },
   { id: "f1", name: "交個朋友", desc: "加 1 位好友", title: "好夥伴", gems: 3, tier: 0, p: () => [S.friendsN || 0, 1] },
   { id: "f5", name: "人氣王", desc: "加 5 位好友", title: "人氣王", gems: 8, tier: 1, p: () => [S.friendsN || 0, 5] },
+  { id: "f10", name: "社交達人", desc: "加 10 位好友", title: "社交達人", gems: 12, tier: 2, icon: "💬", p: () => [S.friendsN || 0, 10] },
+  { id: "f20", name: "交友廣闊", desc: "加 20 位好友", title: "交友廣闊", gems: 25, tier: 3, icon: "🌐", p: () => [S.friendsN || 0, 20] },
+  { id: "f35", name: "萬人迷", desc: "加 35 位好友", title: "萬人迷", gems: 50, tier: 4, icon: "💖", p: () => [S.friendsN || 0, 35] },
+  { id: "f50", name: "遊樂場之友", desc: "把好友加到上限 50 位", title: "遊樂場之友", gems: 100, tier: 5, icon: "🫂", p: () => [S.friendsN || 0, 50] },
   { id: "v1", name: "首勝", desc: "對戰贏 1 場", title: "初露鋒芒", gems: 3, tier: 0, p: () => [S.wins || 0, 1] },
-  { id: "v10", name: "對戰常勝軍", desc: "對戰贏 10 場", title: "對戰常勝軍", gems: 15, tier: 3, p: () => [S.wins || 0, 10] },
+  { id: "v10", name: "對戰常勝軍", desc: "對戰贏 10 場", title: "對戰常勝軍", gems: 15, tier: 1, p: () => [S.wins || 0, 10] },
+  { id: "v30", name: "對戰高手", desc: "對戰贏 30 場", title: "對戰高手", gems: 12, tier: 2, icon: "🥊", p: () => [S.wins || 0, 30] },
+  { id: "v60", name: "百戰將軍", desc: "對戰贏 60 場", title: "百戰將軍", gems: 25, tier: 3, icon: "🛡️", p: () => [S.wins || 0, 60] },
+  { id: "v100", name: "對戰霸主", desc: "對戰贏 100 場", title: "對戰霸主", gems: 50, tier: 4, icon: "🏰", p: () => [S.wins || 0, 100] },
+  { id: "v200", name: "不敗傳說", desc: "對戰贏 200 場", title: "不敗傳說", gems: 100, tier: 5, icon: "🐉", p: () => [S.wins || 0, 200] },
   { id: "c1", name: "小有積蓄", desc: "累積賺到 500 金幣（花掉的也算）", title: "小有積蓄", gems: 3, tier: 0, icon: "🪙", p: () => [S.cE || 0, 500] },
   { id: "c2", name: "荷包滿滿", desc: "累積賺到 2000 金幣（花掉的也算）", title: "荷包滿滿", gems: 6, tier: 1, icon: "🪙", p: () => [S.cE || 0, 2000] },
   { id: "c3", name: "金幣富翁", desc: "累積賺到 5000 金幣（花掉的也算）", title: "金幣富翁", gems: 12, tier: 2, icon: "🪙", p: () => [S.cE || 0, 5000] },
   { id: "c4", name: "日進斗金", desc: "累積賺到 10000 金幣（花掉的也算）", title: "日進斗金", gems: 25, tier: 3, icon: "🪙", p: () => [S.cE || 0, 10000] },
   { id: "c5", name: "富可敵國", desc: "累積賺到 30000 金幣（花掉的也算）", title: "富可敵國", gems: 50, tier: 4, icon: "🪙", p: () => [S.cE || 0, 30000] },
+  { id: "c6", name: "富甲天下", desc: "累積賺到 100000 金幣（花掉的也算）", title: "富甲天下", gems: 100, tier: 5, icon: "🪙", p: () => [S.cE || 0, 100000] },
   { id: "e1", name: "寶石入門", desc: "累積獲得 20 寶石（花掉的也算）", title: "寶石入門", gems: 3, tier: 0, icon: "💎", p: () => [S.gE || 0, 20] },
   { id: "e2", name: "寶石收藏家", desc: "累積獲得 60 寶石（花掉的也算）", title: "寶石收藏家", gems: 6, tier: 1, icon: "💎", p: () => [S.gE || 0, 60] },
   { id: "e3", name: "寶石大亨", desc: "累積獲得 150 寶石（花掉的也算）", title: "寶石大亨", gems: 12, tier: 2, icon: "💎", p: () => [S.gE || 0, 150] },
   { id: "e4", name: "璀璨之星", desc: "累積獲得 300 寶石（花掉的也算）", title: "璀璨之星", gems: 25, tier: 3, icon: "💎", p: () => [S.gE || 0, 300] },
   { id: "e5", name: "寶石之王", desc: "累積獲得 600 寶石（花掉的也算）", title: "寶石之王", gems: 50, tier: 4, icon: "💎", p: () => [S.gE || 0, 600] },
+  { id: "e6", name: "寶石傳說", desc: "累積獲得 1500 寶石（花掉的也算）", title: "寶石傳說", gems: 100, tier: 5, icon: "💎", p: () => [S.gE || 0, 1500] },
   { id: "shopall", name: "海納百川", desc: "買齊商店裡所有東西（遊戲、造型、頭像）。商店有新商品時要補買，否則成就會被收回", title: "海納百川", gems: 200, tier: 5, dyn: true, skin: "river", icon: "🌊", p: () => { const k = shopKeys(); return [k.filter(owns).length, k.length]; }, note: () => { const k = shopKeys(); return `已擁有 ${k.filter(owns).length} / ${k.length}`; } },
 ];
 const shopKeys = () => [...MODES.filter(o => o.price).map(o => "game:" + o.m), ...SKINS.filter(s => s.price).map(s => "skin:" + s.k), ...AVATARS.filter(a => a[1]).map(a => "av:" + a[0])];
@@ -828,7 +848,7 @@ function popAch() {
 // 成就分區與成長鏈：每條鏈依序解鎖，畫面只顯示目前這一階，點卡片可預覽後面幾階。之後加二～五模就在 ACH_CATS 加一區、CHAINS 加一組
 const ACH_CATS = [["gen", "一般"], ["m1", "一模"], ["bank", "大考字庫"]];
 const CHAINS = {
-  gen: [["welcome"], ["g10", "g50", "g200"], ["lv5", "lv10", "lv20", "lv30", "lv40", "lv50"], ["w100"], ["m15"], ["q2500"], ["r300"], ["s250"], ["f1", "f5"], ["v1", "v10"], ["c1", "c2", "c3", "c4", "c5"], ["e1", "e2", "e3", "e4", "e5"], ["shopall"], ["dev"]],
+  gen: [["welcome"], ["g10", "g50", "g200", "g500", "g1000", "g2000"], ["lv5", "lv10", "lv20", "lv30", "lv40", "lv50"], ["w100", "w300", "w1000", "w2500", "w5000"], ["m15"], ["q2500"], ["r300"], ["s250"], ["f1", "f5", "f10", "f20", "f35", "f50"], ["v1", "v10", "v30", "v60", "v100", "v200"], ["c1", "c2", "c3", "c4", "c5", "c6"], ["e1", "e2", "e3", "e4", "e5", "e6"], ["shopall"], ["dev"]],
   m1: [["wall", "mbook90", "mbook"], ["m10"], ["q4500"], ["l250"], ["r600"], ["s250f"]],
   bank: [["m4000", "m6000"], ["q4000"], ["l4000"], ["s4000"]],
 };
@@ -930,7 +950,7 @@ $("#shopBox").onclick = e => {
 
 /* ---------- 背景預覽 ---------- */
 function skinHow(s) {
-  if (s.ach) { const a = achById(s.ach); return `<span style="color:${TIERS[a.tier][1]}">成就「${esc(a.name)}」專屬</span>・需解鎖商店所有東西即可領取${a.note ? `（${a.note()}）` : ""}`; }
+  if (s.ach) { const a = achById(s.ach); return `<span style="color:${TIERS[a.tier][1]}">成就「${esc(a.name)}」專屬</span>・${esc(a.desc)}${a.note ? `（${a.note()}）` : ""}`; }
   if (!s.price) return "預設、免費";
   return `商店購買・<b style="color:${s.cur === "gem" ? "var(--gem)" : "var(--gold)"}">${s.price} ${s.cur === "gem" ? "寶石" : "金幣"}</b>`;
 }

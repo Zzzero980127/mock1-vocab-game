@@ -41,7 +41,7 @@
 :root[data-skin="lava"] body::after{top:0;bottom:0;top:-300px;right:-30px;background-image:radial-gradient(2px 2px at 40px 60px,#ffb347,transparent),radial-gradient(2.5px 2.5px at 150px 20px,#ff7a2f,transparent),radial-gradient(1.5px 1.5px at 100px 140px,#ffd36b,transparent),radial-gradient(2px 2px at 210px 100px,#ff5a1f,transparent);background-size:250px 300px;animation:embers 9s linear infinite}
 @keyframes lavaPulse{0%{opacity:.45;transform:scaleY(.9)}100%{opacity:1;transform:scaleY(1.15)}}
 @keyframes embers{to{transform:translate(30px,-300px)}}
-@media (prefers-reduced-motion:reduce){:root[data-skin] body,:root[data-skin] body::before,:root[data-skin] body::after{animation:none!important}}
+@media (prefers-reduced-motion:reduce){:root[data-skin]::before,:root[data-skin] body,:root[data-skin] body::before,:root[data-skin] body::after{animation:none!important}}
 :root[data-skin="aurora"]{--bg:#06141f;--panel:#0d2230;--ink:#e8fff8;--muted:#8fb8b0;--line:#1b3b4a;--hot:#3df5b0;--cool:#8a7dff;--good:#3df5b0;--bad:#ff6b8a;--soft:#11303f;--gold:#ffe07a;--gem:#c7a6ff;color-scheme:dark}
 #auroraCv{position:fixed;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none}
 :root[data-skin="ocean"]{--bg:#0b2236;--panel:#10324d;--ink:#e6f6ff;--muted:#8fb6cc;--line:#1d4a6b;--hot:#ffb02e;--cool:#4fd1ff;--good:#4ade80;--bad:#ff6b6b;--soft:#13405f;--gold:#ffd54a;color-scheme:dark}
@@ -64,6 +64,18 @@
 :root[data-skin="cyber"] body::before{content:"";position:fixed;left:0;right:0;bottom:0;height:45%;pointer-events:none;z-index:-1;background-image:linear-gradient(rgba(0,229,255,.28) 1px,transparent 1px),linear-gradient(90deg,rgba(255,43,214,.22) 1px,transparent 1px);background-size:48px 48px;-webkit-mask-image:linear-gradient(transparent,#000);mask-image:linear-gradient(transparent,#000)}
 :root[data-skin="cyber"] body::after{content:"";position:fixed;left:0;right:0;top:0;height:2px;pointer-events:none;z-index:-1;background:linear-gradient(90deg,transparent,#00e5ff,#ff2bd6,transparent);box-shadow:0 0 18px 4px rgba(0,229,255,.5);will-change:transform;animation:scanY 6s linear infinite}
 @keyframes scanY{from{transform:translateY(0)}to{transform:translateY(100vh)}}
+/* v2.23 神話「黃金日冕」、傳說「創世星環」：只用 transform 動畫 */
+:root[data-skin="myth"]{--bg:#120d03;--panel:#201808;--ink:#fff6dc;--muted:#c4af7a;--line:#4d3b12;--hot:#ffc83d;--cool:#ffe9a0;--good:#9be07a;--bad:#ff7a5c;--soft:#2c2209;--gold:#ffd04a;--gem:#ffb36b;color-scheme:dark}
+:root[data-skin="myth"] body{background-image:radial-gradient(ellipse at 50% -10%,rgba(255,200,61,.35),transparent 60%),radial-gradient(ellipse at 50% 120%,rgba(255,140,30,.18),transparent 60%);background-attachment:fixed}
+:root[data-skin="myth"] body::before{content:"";position:fixed;left:50%;top:0;width:170vmax;height:170vmax;margin:-85vmax 0 0 -85vmax;pointer-events:none;z-index:-2;background:repeating-conic-gradient(rgba(255,200,61,.2) 0 5deg,transparent 5deg 15deg);-webkit-mask-image:radial-gradient(circle,#000,transparent 55%);mask-image:radial-gradient(circle,#000,transparent 55%);will-change:transform;animation:legSpin 140s linear infinite}
+:root[data-skin="myth"] body::after{content:"";position:fixed;left:-300px;top:-300px;right:0;bottom:0;pointer-events:none;z-index:-1;will-change:transform;background-image:radial-gradient(2px 2px at 40px 50px,#ffe08a,transparent),radial-gradient(3px 3px at 160px 130px,#ffc83d,transparent),radial-gradient(2px 2px at 250px 230px,#fff3c4,transparent),radial-gradient(2.5px 2.5px at 90px 270px,#ffb020,transparent);background-size:300px 300px;animation:starDrift 26s linear infinite}
+:root[data-skin="legend"]{--bg:#05030f;--panel:#110a26;--ink:#fff4ff;--muted:#b9a6d9;--line:#3a2470;--hot:#ff5fd2;--cool:#5cf0ff;--good:#6bf0a0;--bad:#ff6b8a;--soft:#1b1038;--gold:#ffe08a;--gem:#ff9de2;color-scheme:dark}
+:root[data-skin="legend"] body{background-image:radial-gradient(ellipse at 50% 40%,rgba(120,60,255,.38),transparent 65%),radial-gradient(ellipse at 50% 115%,rgba(255,80,200,.28),transparent 60%);background-attachment:fixed}
+:root[data-skin="legend"]::before{content:"";position:fixed;left:-240px;top:-240px;right:0;bottom:0;pointer-events:none;z-index:-3;background-image:radial-gradient(1px 1px at 20px 30px,#fff,transparent),radial-gradient(1.5px 1.5px at 120px 80px,#ffe9a8,transparent),radial-gradient(1px 1px at 200px 160px,#bfe9ff,transparent),radial-gradient(1.5px 1.5px at 60px 210px,#ffc4f0,transparent);background-size:240px 240px;will-change:transform;animation:starDrift 50s linear infinite}
+:root[data-skin="legend"] body::before,:root[data-skin="legend"] body::after{content:"";position:fixed;left:50%;top:50%;pointer-events:none;will-change:transform}
+:root[data-skin="legend"] body::before{width:160vmax;height:160vmax;margin:-80vmax 0 0 -80vmax;z-index:-2;background:conic-gradient(#ff4d4d,#ffb020,#f5e642,#3ddc84,#3db8ff,#a56bff,#ff4d9a,#ff4d4d);opacity:.4;-webkit-mask-image:radial-gradient(circle,transparent 14%,#000 22%,transparent 33%);mask-image:radial-gradient(circle,transparent 14%,#000 22%,transparent 33%);animation:legSpin 60s linear infinite}
+:root[data-skin="legend"] body::after{width:110vmax;height:110vmax;margin:-55vmax 0 0 -55vmax;z-index:-1;background:conic-gradient(#5cf0ff,#a56bff,#ff5fd2,#ffe08a,#5cf0ff);opacity:.3;-webkit-mask-image:radial-gradient(circle,transparent 16%,#000 24%,transparent 34%);mask-image:radial-gradient(circle,transparent 16%,#000 24%,transparent 34%);animation:legSpin 40s linear infinite reverse}
+@keyframes legSpin{to{transform:rotate(360deg)}}
 /* v2.21 海納百川：浮世繪神奈川沖浪裏（river.svg 是大浪＋富士，river-pat.svg 是青海波；只用 transform 動畫） */
 :root[data-skin="river"]{--bg:#091a36;--panel:#0f2b52;--ink:#f6eed6;--muted:#b9c0ae;--line:#2d5c94;--hot:#e0533a;--cool:#e8d6a0;--good:#8fd9a8;--bad:#ff8a73;--soft:#163a68;--gold:#f2d37a;--gem:#a9d6ff;color-scheme:dark}
 :root[data-skin="river"] body{background:#091a36}
@@ -349,7 +361,7 @@ th{color:var(--muted);font-weight:600;font-size:13px}
 <script src="words.js?v=6"></script>
 <script src="bankwords.js?v=8"></script>
 <script src="firebase-config.js?v=7"></script>
-<script src="app.js?v=87"></script>
+<script src="app.js?v=88"></script>
 <script type="module" src="online.js?v=29"></script>
 </body>
 </html>
