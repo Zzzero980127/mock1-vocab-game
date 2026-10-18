@@ -633,6 +633,7 @@ function fmt(cat, d) {
   if (cat === "best.match") return `${v.toFixed(1)} 秒`;
   if (cat === "achN") return `${v || 0} 個`;
   if (cat === "coins" || cat === "gems") return `${v || 0} ${cat === "coins" ? "金幣" : "寶石"}`;
+  if (cat === "best.all" && d.best?.perfect336) return `${v} 分 <b style="color:var(--gold)">全對</b>`;
   return cat === "wins" ? `${v || 0} 勝` : `${v} 分`;
 }
 async function renderRank(box) {
