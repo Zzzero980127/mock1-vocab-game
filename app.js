@@ -7,6 +7,7 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.10.0", date: "2026-10-18", items: ["熔岩噴泉：每團岩漿各自決定散開的高度，有的衝到頂點、有的半途就向旁邊散開回落"] },
   { v: "2.9.9", date: "2026-10-18", items: ["熔岩噴泉改成持續噴湧：先衝到頂的岩漿先散開落下，後面的繼續往上衝，不再整批一起落"] },
   { v: "2.9.8", date: "2026-10-18", items: ["熔岩噴泉的岩漿柱加粗"] },
   { v: "2.9.7", date: "2026-10-18", items: ["熔岩噴發改成噴泉：一道岩漿柱往上衝，到頂點向四周散開再落下；頻率降低（每側約 15～25 秒一次）"] },
@@ -385,11 +386,12 @@ function lavaCanvas(on) {
     if (t - last < 33) return; last = t;
     for (const o of sides) {
       if (t > o.nextAt && !o.emit) { o.emit = 50 + Math.random() * 20 | 0; o.P = h * (.5 + Math.random() * .3); o.x0 = o.d < 0 ? 120 + Math.random() * 200 : W_ - 120 - Math.random() * 200; o.nextAt = t + 14000 + Math.random() * 12000; }
-      if (o.emit) { o.emit--; for (let i = 0; i < 2; i++) o.ps.push({ x: o.x0 + (Math.random() - .5) * 30, y: h + 24, vx: (Math.random() - .5) * .5, vy: -Math.sqrt(2 * gr * o.P * (.8 + Math.random() * .2)), r: 20 + Math.random() * 10, top: false }); }
+      if (o.emit) { o.emit--; for (let i = 0; i < 2; i++) o.ps.push({ x: o.x0 + (Math.random() - .5) * 30, y: h + 24, vx: (Math.random() - .5) * .5, vy: 0, V: Math.sqrt(2 * gr * o.P * (.85 + Math.random() * .15)), k: Math.random() < .4 ? 0 : .15 + Math.random() * .7, r: 20 + Math.random() * 10, top: false }); }
       const g = o.g; g.clearRect(0, 0, W_, h);
       o.ps = o.ps.filter(p => p.y < h + 40);
       for (const p of o.ps) {
-        if (!p.top && p.vy >= -gr * 1.5) { p.top = true; p.vx = (Math.random() - .5) * 9; p.vy *= .3; }   // 到頂點：往四周散開再落下
+        if (p.vy === 0 && !p.top) p.vy = -p.V;
+        if (!p.top && p.vy >= -p.V * p.k - gr * 1.5) { p.top = true; p.vx = (Math.random() - .5) * 9; p.vy *= p.k ? .5 : .3; }   // 每顆自己決定在哪裡散開：有的衝到頂，有的半途就散   // 到頂點：往四周散開再落下
         p.vy += gr; p.x += p.vx; p.y += p.vy; p.r *= .997;
         const gd = g.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);   // 中心偏黃、邊緣橘紅
         gd.addColorStop(0, "#ffe08a"); gd.addColorStop(.55, "#ff9a2e"); gd.addColorStop(1, "#ff4a14");
