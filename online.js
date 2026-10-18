@@ -393,6 +393,13 @@ async function startRoom() {
 function startRoomGame() {
   const r = room, d = r.d, round = d.round, n = d.qs.length, meRef = F.doc(r.ref, "members", user.uid);
   r.round = round; r.inGame = true;
+  if (document.hidden) {   // 對方在別的瀏覽器分頁：標題閃爍＋提示音（有授權通知就跳通知），回到分頁就恢復
+    const t0 = document.title; let on = true;
+    const bl = setInterval(() => { document.title = on ? "⚔️ 對戰開始了！快回來作答" : t0; on = !on; }, 800);
+    document.addEventListener("visibilitychange", function f() { if (document.hidden) return; clearInterval(bl); document.title = t0; document.removeEventListener("visibilitychange", f); });
+    A.sfx.win?.();
+    try { if (window.Notification && Notification.permission === "granted") new Notification("英文遊樂場", { body: "房主開始對戰了，快回來作答！" }); } catch (e) {}
+  }
   let my = { p: 0, s: 0 }, mine = null, done = false, tm = 0;
   F.updateDoc(meRef, { r: round, p: 0, s: 0 }).catch(() => {});
   const cur = m => m.r === round;
@@ -407,8 +414,11 @@ function startRoomGame() {
     onEnd: (score, right, missed) => {
       mine = { score, right, missed };
       A.openStage(`${A.topBar()}<div class="big" style="font-size:28px">等其他人作答完…</div>
-        <p class="center">你的分數 <b>${score}</b>（答對 ${right}/${n}）<br><span id="waitOpp"></span></p>`);
-      tm = setTimeout(finish, 90000); r.board();
+        <p class="center">你的分數 <b>${score}</b>（答對 ${right}/${n}）<br><span id="waitOpp"></span></p>
+        <div class="center"><button class="btn ghost" id="skipWait" type="button" hidden>不等了，直接結算</button></div>`);
+      tm = setTimeout(() => { const b = $("#skipWait"); if (b) b.hidden = false; }, 30000);
+      $("#skipWait").onclick = () => finish(true);
+      r.board();
     },
   };
   r.board = () => {
@@ -417,9 +427,10 @@ function startRoomGame() {
     const w = $("#waitOpp"); if (w) w.textContent = `已完成 ${others().filter(([, m]) => cur(m) && (m.p >= n || m.p < 0)).length}/${others().length} 人`;
     if (mine && allDone()) finish();
   };
-  function finish() {
+  function finish(skip) {
     if (done) return; done = true; clearTimeout(tm); r.inGame = false; r.board = null;
-    const list = rows().map(x => x.me ? { ...x, p: n, s: mine.score } : x).sort((a, b) => b.s - a.s);
+    const fin = new Set(others().filter(([, m]) => cur(m) && (m.p >= n || m.p < 0)).map(([id]) => id)), gone = new Set();
+    const list = rows().map(x => x.me ? { ...x, p: n, s: mine.score } : skip && !fin.has(x.id) ? (gone.add(x.id), { ...x, p: -1 }) : x).sort((a, b) => b.s - a.s);
     const live = list.filter(x => !x.me && x.p >= 0), S = A.S;
     const res = live.some(x => x.s > mine.score) ? "lose" : live.some(x => x.s === mine.score) ? "tie" : "win";
     // 防刷：兩個帳號互打會雙贏，所以每天只有前 5 場有獎勵、同一個對手最多 2 場；對手都棄權不算
@@ -432,12 +443,12 @@ function startRoomGame() {
     const xpGet = rewarded ? mine.right * 4 : 0;
     const coins = A.gain(xpGet, rewarded ? { win: 20, lose: 0, tie: 5 }[res] : 0); A.checkAch(); A.sfx[res === "lose" ? "bad" : "win"]();
     const board = list.map((x, i) => `<div class="person ${x.me ? "me-row" : ""}"><span class="rank r${i + 1}">${i + 1}</span><span class="av">${esc(x.av)}</span>
-      <div class="info"><b>${esc(x.name)}${x.me ? "（我）" : ""}</b></div><span class="score">${x.p < 0 ? "棄權" : x.s + " 分"}</span></div>`).join("");
+      <div class="info"><b>${esc(x.name)}${x.me ? "（我）" : ""}</b></div><span class="score">${gone.has(x.id) ? "未完成" : x.p < 0 ? "棄權" : x.s + " 分"}</span></div>`).join("");
     const closed = r.closed;
     if (closed) { dropRoom(); }
     else if (d.host === user.uid) F.updateDoc(r.ref, { status: "waiting" }).catch(() => {});
-    A.openStage(`${A.topBar()}<div class="big">${{ win: "勝利！", lose: "惜敗", tie: "平手" }[res]}</div>
-      <p class="center">${rewarded ? `獲得 ${xpGet} XP・<b style="color:var(--gold)">${coins} 金幣</b>` : `<span class="muted">${live.length ? "今天的對戰獎勵已達上限（每天 5 場、同一人 2 場）" : "其他人都棄權了，不計獎勵"}</span>`}${closed ? `<br><span class="muted">房主已關閉房間</span>` : ""}</p>
+    A.openStage(`${A.topBar()}<div class="big">${(gone.size && res === "win" ? "對手未完成" : { win: "勝利！", lose: "惜敗", tie: "平手" }[res])}</div>
+      <p class="center">${rewarded ? `獲得 ${xpGet} XP・<b style="color:var(--gold)">${coins} 金幣</b>` : `<span class="muted">${live.length ? "今天的對戰獎勵已達上限（每天 5 場、同一人 2 場）" : gone.size ? "對手還沒作答完，不計勝負與獎勵" : "其他人都棄權了，不計獎勵"}</span>`}${closed ? `<br><span class="muted">房主已關閉房間</span>` : ""}</p>
       <div class="card">${board}</div>
       ${A.missedTable(mine.missed)}
       <div class="bar" style="justify-content:center"><button class="btn" data-act="vs" type="button">${closed ? "回大廳" : "回房間"}</button><button class="btn ghost" data-act="home" type="button">回選單</button></div>`);

@@ -8,6 +8,7 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.18.2", date: "2026-10-18", items: ["修正房間對戰：先打完的人會一直等其他人，不再 90 秒就自動判定勝利；等超過 30 秒會出現「不等了，直接結算」，沒打完的人算未完成、不給獎勵", "房主按開始時，如果對方在別的瀏覽器分頁：分頁標題會閃「對戰開始了」＋提示音；分頁在背景的時間不會算進作答時間"] },
   { v: "2.18.1", date: "2026-10-18", items: ["展示成就上方新增 5 個預覽框，看得到目前選了哪幾個，點框內圖標可取消；「配對快手」改用 🏎️ 避免和開發者圖標重複"] },
   { v: "2.18.0", date: "2026-10-18", items: ["每個成就都有專屬小圖標", "個人資料「展示稱號」改成「展示成就」：選最多 5 個成就小圖標，好友清單和排行榜顯示給別人看（邊框顏色依稀有度）"] },
   { v: "2.17.1", date: "2026-10-18", items: ["成就系列預覽改成橫排小圖標（普通 ➜ 稀有 ➜ 超稀有…），點圖標下方說明欄切換，不再被截掉"] },
@@ -1036,6 +1037,10 @@ function playMatch(P) {
 
 
 /* ---------- 快問連擊（好友對戰也用這個，vs 帶入固定題目與回呼） ---------- */
+// 分頁在背景時 requestAnimationFrame 會暫停，回來時不能把這段時間算進作答時間
+let hidTotal = 0, hidSince = document.hidden ? performance.now() : 0;
+document.addEventListener("visibilitychange", () => { if (document.hidden) hidSince = performance.now(); else if (hidSince) { hidTotal += performance.now() - hidSince; hidSince = 0; } });
+const hidNow = () => hidTotal + (hidSince ? performance.now() - hidSince : 0);
 function playQuiz(P, vs, kind = "quiz") {
   const BW0 = kind === "all" ? W.filter(x => !x.b) : null;
   const Q = vs ? vs.qs : kind === "all" ? shuffle(BW0).map(x => mkQ("quiz", x, BW0)) : makeQs(kind, P, uni(), nqN(kind)), qs = Q.map(q => W[q.id]);
@@ -1084,11 +1089,11 @@ function playQuiz(P, vs, kind = "quiz") {
     if (spoken) $("#replay").onclick = replayFn;
     $("#opts").innerHTML = texts.map((t, j) => `<button class="opt ${cls}" data-k="${j}"><kbd>${j + 1}</kbd>${esc(t)}</button>`).join("");
     if (k === "hear" || k === "tf") speak(x.w); else if (enQ) sayIf(x.w);
-    const t0 = performance.now(), T = MC_TIME[k] || 20000;
+    const t0 = performance.now(), h0 = hidNow(), T = MC_TIME[k] || 20000, el = () => performance.now() - t0 - (hidNow() - h0);
     let beep = 3;
-    const tick = () => { const r = 1 - (performance.now() - t0) / T; if (r * 10 < beep && beep > 0) { beep--; sfx.warn(); } $("#tbar").style.width = Math.max(0, r) * 100 + "%"; if (r <= 0) answer(-1, 0); else raf = requestAnimationFrame(tick); };
+    const tick = () => { const r = 1 - el() / T; if (r * 10 < beep && beep > 0) { beep--; sfx.warn(); } $("#tbar").style.width = Math.max(0, r) * 100 + "%"; if (r <= 0) answer(-1, 0); else raf = requestAnimationFrame(tick); };
     raf = requestAnimationFrame(tick);
-    $("#opts").onclick = e => { const b = e.target.closest(".opt"); if (b) answer(+b.dataset.k, 1 - (performance.now() - t0) / T); };
+    $("#opts").onclick = e => { const b = e.target.closest(".opt"); if (b) answer(+b.dataset.k, 1 - el() / T); };
     function answer(kk, r) {
       if (locked) return; locked = true; cancelAnimationFrame(raf);
       const btns = stage.querySelectorAll(".opt"), ok = kk >= 0 && kk === okI;
