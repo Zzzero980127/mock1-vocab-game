@@ -7,6 +7,7 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.13.0", date: "2026-10-18", items: ["森林造型改成夜森（深綠底），其餘造型加動態背景：森林有螢火蟲、深海有升起的氣泡、霓虹有飄浮的霓虹方塊、黑金有灑落的金粉", "黑金造型價格調成 1000 金幣（已買的不受影響）"] },
   { v: "2.12.1", date: "2026-10-18", items: ["修正作者帳號有時認不出來（好友代碼對不上就不算作者）：登入後改用帳號 uid 比對，商店全擁有、DEV 標籤都會正確出現"] },
   { v: "2.12.0", date: "2026-10-18", items: ["排行榜新增「金幣」「寶石」兩個榜", "作者帳號：商店的遊戲、造型、頭像全部直接擁有，商店裡仍顯示原價"] },
   { v: "2.11.2", date: "2026-10-18", items: ["櫻花造型改成夜色：深紫粉的夜空、月亮，背景長了四棵櫻花樹，花瓣會緩緩飄落（系統設「減少動態」時只畫靜態）"] },
@@ -166,10 +167,10 @@ const MODES = [
 const SKINS = [
   { k: "default", name: "預設", desc: "跟著系統深淺色", price: 0, sw: ["#eef1f8", "#ff6a1a", "#0a9c95"] },
   { k: "sakura", name: "櫻花", desc: "夜色裡的櫻花樹與飄落花瓣", price: 120, sw: ["#25121f", "#ff7aa8", "#a99bff"] },
-  { k: "forest", name: "森林", desc: "護眼綠", price: 120, sw: ["#eef5ea", "#d9822b", "#2f8f4e"] },
-  { k: "ocean", name: "深海", desc: "深藍夜讀", price: 150, sw: ["#0b2236", "#ffb02e", "#4fd1ff"] },
-  { k: "neon", name: "霓虹", desc: "電玩感", price: 200, sw: ["#0a0716", "#ff3fa4", "#2ff3e0"] },
-  { k: "gold", name: "黑金", desc: "尊爵不凡", price: 300, sw: ["#121110", "#e8b64c", "#7fc8a9"] },
+  { k: "forest", name: "森林", desc: "夜森裡的螢火蟲", price: 120, sw: ["#0e1a12", "#f0a04b", "#6fd08c"] },
+  { k: "ocean", name: "深海", desc: "深藍夜讀，氣泡緩緩升起", price: 150, sw: ["#0b2236", "#ffb02e", "#4fd1ff"] },
+  { k: "neon", name: "霓虹", desc: "電玩感，霓虹方塊往上飄", price: 200, sw: ["#0a0716", "#ff3fa4", "#2ff3e0"] },
+  { k: "gold", name: "黑金", desc: "尊爵不凡，金粉灑落", price: 1000, sw: ["#121110", "#e8b64c", "#7fc8a9"] },
   { k: "galaxy", name: "星空", desc: "滿天星斗", price: 15, cur: "gem", sw: ["#0d0b24", "#b18cff", "#ffd36b"] },
   { k: "lava", name: "熔岩", desc: "火山爆發", price: 15, cur: "gem", sw: ["#1a0b07", "#ff5a1f", "#ffc23d"] },
   { k: "aurora", name: "極光", desc: "星軌下的流動極光", price: 50, cur: "gem", sw: ["#06141f", "#3df5b0", "#8a7dff"] },
@@ -349,7 +350,7 @@ function pool(filter) {
   if (S.wrongOnly) p = p.filter(x => S.wrong[x.id]);
   return filter ? p.filter(filter) : p;
 }
-function applySkin() { if (S.skin === "default") document.documentElement.removeAttribute("data-skin"); else document.documentElement.dataset.skin = S.skin; auroraCanvas(S.skin === "aurora"); lavaCanvas(S.skin === "lava"); sakuraCanvas(S.skin === "sakura"); meteors(S.skin === "galaxy"); }
+function applySkin() { if (S.skin === "default") document.documentElement.removeAttribute("data-skin"); else document.documentElement.dataset.skin = S.skin; auroraCanvas(S.skin === "aurora"); lavaCanvas(S.skin === "lava"); sakuraCanvas(S.skin === "sakura"); fxCanvas(["gold", "forest", "ocean", "neon"].includes(S.skin) ? S.skin : ""); meteors(S.skin === "galaxy"); }
 
 // 夜櫻：offscreen canvas 一次畫好夜空、月亮和幾棵櫻花樹（遞迴樹枝＋花團），之後每幀只貼圖並疊上飄落的花瓣
 let sakuraRaf = 0, sakuraFit = null;
@@ -399,6 +400,54 @@ function sakuraCanvas(on) {
   };
   sakuraFit = () => { build(); if (still) draw(0); };
   addEventListener("resize", sakuraFit); build(); sakuraRaf = requestAnimationFrame(draw);
+}
+// 森林／深海／霓虹／黑金：共用一張粒子 canvas（螢火蟲、氣泡、霓虹方塊、金粉），30 幀、分頁隱藏時暫停
+let fxRaf = 0, fxKind = "", fxFit = null;
+const FX = {
+  gold: { n: 80, make: (w, h, i) => ({ x: Math.random() * w, y: i ? Math.random() * h : -10, vx: (Math.random() - .5) * .4, vy: .35 + Math.random() * .9, s: 1 + Math.random() * 2.4, ph: Math.random() * 6.3, c: ["#ffd166", "#ffe9a8", "#e8b64c"][Math.random() * 3 | 0] }),
+    draw(g, p, w, h) {
+      p.ph += .06; p.x += p.vx + Math.sin(p.ph * .5) * .3; p.y += p.vy;
+      g.globalAlpha = .35 + .65 * Math.abs(Math.sin(p.ph)); g.fillStyle = g.strokeStyle = g.shadowColor = p.c; g.shadowBlur = 6;
+      g.beginPath(); g.arc(p.x, p.y, p.s, 0, 6.3); g.fill();
+      if (p.s > 2.2) { g.lineWidth = 1; g.beginPath(); g.moveTo(p.x - p.s * 3, p.y); g.lineTo(p.x + p.s * 3, p.y); g.moveTo(p.x, p.y - p.s * 3); g.lineTo(p.x, p.y + p.s * 3); g.stroke(); }
+      return p.y < h + 10;
+    } },
+  forest: { n: 40, make: (w, h) => ({ x: Math.random() * w, y: Math.random() * h, vx: (Math.random() - .5) * .3, vy: (Math.random() - .5) * .25, s: 1.4 + Math.random() * 1.6, ph: Math.random() * 6.3 }),
+    draw(g, p, w, h) {
+      p.ph += .03; p.x += p.vx + Math.sin(p.ph) * .4; p.y += p.vy + Math.cos(p.ph * .7) * .3;
+      if (p.x < -10) p.x = w + 10; if (p.x > w + 10) p.x = -10; if (p.y < -10) p.y = h + 10; if (p.y > h + 10) p.y = -10;
+      g.globalAlpha = .25 + .75 * Math.sin(p.ph * .8) ** 2; g.fillStyle = "#e4ff8a"; g.shadowColor = "#c8ff4a"; g.shadowBlur = 14;
+      g.beginPath(); g.arc(p.x, p.y, p.s, 0, 6.3); g.fill(); return true;
+    } },
+  ocean: { n: 40, make: (w, h, i) => ({ x: Math.random() * w, y: i ? Math.random() * h : h + 12, vy: -(.4 + Math.random() * .9), s: 2 + Math.random() * 6, ph: Math.random() * 6.3 }),
+    draw(g, p) {
+      p.ph += .04; p.x += Math.sin(p.ph) * .4; p.y += p.vy;
+      g.globalAlpha = .55; g.strokeStyle = "rgba(180,230,255,.8)"; g.lineWidth = 1.2; g.beginPath(); g.arc(p.x, p.y, p.s, 0, 6.3); g.stroke();
+      g.fillStyle = "rgba(255,255,255,.7)"; g.beginPath(); g.arc(p.x - p.s * .35, p.y - p.s * .35, p.s * .2, 0, 6.3); g.fill(); return p.y > -14;
+    } },
+  neon: { n: 30, make: (w, h, i) => ({ x: Math.random() * w, y: i ? Math.random() * h : h + 20, vy: -(.5 + Math.random() * 1.2), s: 3 + Math.random() * 8, rot: Math.random() * 6.3, vr: (Math.random() - .5) * .04, c: Math.random() < .5 ? "#ff3fa4" : "#2ff3e0" }),
+    draw(g, p) {
+      p.y += p.vy; p.rot += p.vr; g.globalAlpha = .7; g.strokeStyle = g.shadowColor = p.c; g.shadowBlur = 10; g.lineWidth = 1.5;
+      g.translate(p.x, p.y); g.rotate(p.rot); g.strokeRect(-p.s, -p.s, p.s * 2, p.s * 2); return p.y > -30;
+    } },
+};
+function fxCanvas(kind) {
+  let cv = document.getElementById("fxCv");
+  cancelAnimationFrame(fxRaf); fxRaf = 0; fxKind = kind;
+  if (fxFit) removeEventListener("resize", fxFit); fxFit = null;
+  if (!kind || matchMedia("(prefers-reduced-motion:reduce)").matches) { if (cv) cv.remove(); return; }
+  if (!cv) { cv = document.createElement("canvas"); cv.id = "fxCv"; document.body.prepend(cv); }
+  const g = cv.getContext("2d"), def = FX[kind]; let w = 0, h = 0, ps = [], last = 0;
+  fxFit = () => { w = cv.width = innerWidth; h = cv.height = innerHeight; ps = Array.from({ length: Math.round(def.n * Math.min(1, w / 1000 + .3)) }, () => def.make(w, h, true)); };
+  addEventListener("resize", fxFit); fxFit();
+  const loop = ms => {
+    if (fxKind !== kind) return;
+    fxRaf = requestAnimationFrame(loop);
+    if (document.hidden || ms - last < 33) return; last = ms;
+    g.clearRect(0, 0, w, h);
+    for (const p of ps) { g.save(); const alive = def.draw(g, p, w, h); g.restore(); if (!alive) Object.assign(p, def.make(w, h, false)); }
+  };
+  fxRaf = requestAnimationFrame(loop);
 }
 // 星空：每隔 15～35 秒劃過一顆流星（一根漸層光條，用 Web Animations 移動，幾乎不耗效能）
 let meteorTm = 0;
