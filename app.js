@@ -8,6 +8,7 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.16.2", date: "2026-10-18", items: ["修正傳說成就卡片的彩虹效果誤蓋住頭像和 DEV 標章"] },
   { v: "2.16.1", date: "2026-10-18", items: ["個人資料的稱號、展示稱號按鈕依稀有度上色（史詩紫、神話金、傳說彩虹），一眼看出哪個比較帥"] },
   { v: "2.16.0", date: "2026-10-18", items: ["成就分成「一般」「一模」「大考字庫」三區（之後二～五模會各有一區）", "成就改成成長制：同一系列只顯示目前這一階，解完才出現下一階，點卡片可預覽後面的階段"] },
   { v: "2.15.0", date: "2026-10-18", items: ["個人資料新增「展示稱號」：最多選 5 個稱號，好友清單和排行榜會顯示給其他人看"] },
@@ -591,7 +592,7 @@ const titleHtml = (title, dev) => {
   const a = ACH.find(x => x.title === title && !x.hidden);   // 稱號顏色 = 對應成就的稀有度顏色，神話以上再加光暈
   if (!a || a.tier < 1) return esc(title);
   const c = TIERS[a.tier][1];
-  if (a.tier === 4) return `<span class="rb" style="font-weight:700">${esc(title)}</span>`;
+  if (a.tier === 4) return `<span class="rbt" style="font-weight:700">${esc(title)}</span>`;
   return `<span style="color:${c};font-weight:700${a.tier >= 3 ? `;text-shadow:0 0 10px ${c}` : ""}">${esc(title)}</span>`;
 };
 function renderTop() {
@@ -726,7 +727,7 @@ function popAch() {
   if (a.tier >= 2) return bigAch(a, () => { achQ.shift(); popAch(); });
   sfx.ding();
   const el = document.createElement("div"); el.className = "achpop";
-  el.innerHTML = `<span class="trophy${a.tier === 4 ? " rb" : ""}" style="color:${TIERS[a.tier][1]}">🏆</span><span><small>成就解鎖・${TIERS[a.tier][0]}</small><b>${esc(a.name)}</b><small>稱號「${esc(a.title)}」・<span style="color:var(--gem)">+${a.gems} 寶石</span></small></span>`;
+  el.innerHTML = `<span class="trophy" style="color:${TIERS[a.tier][1]}">🏆</span><span><small>成就解鎖・${TIERS[a.tier][0]}</small><b>${esc(a.name)}</b><small>稱號「${esc(a.title)}」・<span style="color:var(--gem)">+${a.gems} 寶石</span></small></span>`;
   el.onclick = () => showTab("ach");
   document.body.append(el);
   setTimeout(() => { el.remove(); achQ.shift(); popAch(); }, 2800);
@@ -746,7 +747,7 @@ const achCard = (a, n, N, chainIdx) => {
   return `<div class="ach ${got ? "got" : ""} ${got && a.tier >= 2 ? "epic" : ""} ${a.tier === 4 ? "rb" : ""}" style="--tc:${t[1]};${N > 1 ? "cursor:pointer" : ""}" ${N > 1 ? `data-chain="${chainIdx}" role="button" tabindex="0"` : ""}>
         <div class="bar"><span class="trophy">${got ? a.icon || "🏆" : "🔒"}</span><span class="tier">${t[0]}</span></div>
         <b>${esc(a.name)}</b><small>${esc(a.desc)}</small>
-        <div class="plate"><span class="av">${S.avatar}</span><span><b>${nameHtml(S.name, isMeDev())}</b><small>${a.id === "dev" ? titleHtml(a.title, true) : esc(a.title)}</small></span></div>
+        <div class="plate"><span class="av">${S.avatar}</span><span><b>${nameHtml(S.name, isMeDev())}</b><small>${a.id === "dev" ? titleHtml(a.title, true) : a.tier === 4 ? `<span class="rbt">${esc(a.title)}</span>` : esc(a.title)}</small></span></div>
         <small>獎勵：稱號「${esc(a.title)}」・<span style="color:var(--gem)">${a.gems} 寶石</span></small>
         ${got ? `<small class="ok">${a.id === "welcome" ? "加入日期" : "解鎖於"} ${got}</small>`
           : `<div class="xpbar"><i style="width:${Math.min(1, c / g) * 100}%"></i></div><small>${Math.min(c, g)} / ${g}</small>${a.note ? `<small>${a.note()}</small>` : ""}`}
@@ -770,7 +771,7 @@ $("#achBox").onclick = e => {
   modal(`<h2>成就系列：${esc(ch[0].name)}${ch.length > 1 ? " ➜ …" : ""}</h2><div style="display:flex;flex-direction:column;gap:10px;margin:10px 0">${ch.map((a, i) => {
     const got = S.ach[a.id], [p, g] = a.p(), t = TIERS[a.tier];
     return `<div style="border:1.5px solid ${got ? t[1] : "var(--line)"};border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:4px">
-      <div class="bar"><b>第 ${i + 1} 階・${esc(a.name)}</b><span class="tier ${a.tier === 4 ? "rb" : ""}" style="--tc:${t[1]};color:${t[1]};border:1px solid ${t[1]};border-radius:6px;padding:0 6px;font-size:11px;font-weight:700">${t[0]}</span></div>
+      <div class="bar"><b>第 ${i + 1} 階・${esc(a.name)}</b><span class="tier ${a.tier === 4 ? "rbt" : ""}" style="--tc:${t[1]};color:${t[1]};border:1px solid ${t[1]};border-radius:6px;padding:0 6px;font-size:11px;font-weight:700">${t[0]}</span></div>
       <small class="muted">${esc(a.desc)}</small>
       <small>獎勵：稱號「${esc(a.title)}」・<span style="color:var(--gem)">${a.gems} 寶石</span></small>
       <small class="${got ? "ok" : "muted"}" style="${got ? "color:var(--good);font-weight:700" : ""}">${got ? `✔ 已解鎖 ${got}` : `進度 ${Math.min(p, g)} / ${g}`}</small></div>`; }).join("")}</div>
