@@ -7,6 +7,7 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.12.1", date: "2026-10-18", items: ["修正作者帳號有時認不出來（好友代碼對不上就不算作者）：登入後改用帳號 uid 比對，商店全擁有、DEV 標籤都會正確出現"] },
   { v: "2.12.0", date: "2026-10-18", items: ["排行榜新增「金幣」「寶石」兩個榜", "作者帳號：商店的遊戲、造型、頭像全部直接擁有，商店裡仍顯示原價"] },
   { v: "2.11.2", date: "2026-10-18", items: ["櫻花造型改成夜色：深紫粉的夜空、月亮，背景長了四棵櫻花樹，花瓣會緩緩飄落（系統設「減少動態」時只畫靜態）"] },
   { v: "2.11.1", date: "2026-10-18", items: ["範圍加成：快問連擊、聽音選義、是非快答、拼字找碴、缺字補完、單字隕石的分數，會隨選的課數（大考字庫是級別數）線性加成——只選 1 課 ×1，全選 ×2（只練錯題本、好友對戰不加成）", "快問之王／大考快問王門檻因全選有 ×2 加成，調回 4500"] },
@@ -178,7 +179,8 @@ const AVATARS = [["🙂", 0], ["🐱", 0], ["🐶", 0], ["🐰", 30], ["🐸", 3
 // 成就：p() 回傳 [目前進度, 目標]；解鎖送稱號和寶石
 const knownN = () => Object.keys(S.known || {}).length;
 const DEV_CODE = "4T623X";   // 遊戲作者的好友代碼
-const isMeDev = () => S.code === DEV_CODE;
+let devMe = false;   // online.js 登入後用 uid 比對 codes/DEV_CODE 的結果（好友代碼對不上時也認得出作者）
+const isMeDev = () => S.code === DEV_CODE || devMe;
 // 熟練度：一個字庫「每個字都考過」且「第一次作答」正確率達標，才算讀熟（重複刷同一批字沒用）
 const idsOf = k => { const r = k === "book" ? W.filter(x => !x.b) : W.filter(x => x.b && x.lv <= (k === "c4000" ? 4 : 6)); return r.map(x => x.id); };
 const _ids = {};
@@ -1162,5 +1164,5 @@ function playListen(P) {
 
 $("#total")?.replaceChildren(String(BOOKN));
 applySkin(); renderChips(); hud(); renderLogDot(); setTimeout(checkAch, 800);
-window.APP = { get S() { return S; }, set S(v) { S = v; }, save, checkAch, nameHtml, titleHtml, DEV_CODE, toast, sfx, modal, esc, lvOf, gain, owns, FREE, renderTop, hud, applySkin, renderChips,
+window.APP = { setDevMe(v) { devMe = !!v; }, get S() { return S; }, set S(v) { S = v; }, save, checkAch, nameHtml, titleHtml, DEV_CODE, toast, sfx, modal, esc, lvOf, gain, owns, FREE, renderTop, hud, applySkin, renderChips,
   refreshTab, showTab, openStage, topBar, home, LESSONS, WORDS_BOOK: () => W.filter(x => !x.b), missedTable, playQuiz, makeVsQuestions, armed, get tab() { return curTab; } };

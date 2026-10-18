@@ -84,11 +84,12 @@ async function onLogin() {
     A.toast(`已登入，歡迎 ${S.name}！`);
   } catch (e) { console.error(e); A.toast("讀取雲端存檔失敗：" + (e.code || e.message)); }
   beat(); clearInterval(beatTimer); beatTimer = setInterval(beat, 60000);
-  F.getDoc(F.doc(db, "codes", A.DEV_CODE)).then(c => { devUid = c.exists() ? c.data().uid : ""; A.refreshTab(); }).catch(() => {});
+  F.getDoc(F.doc(db, "codes", A.DEV_CODE)).then(c => { devUid = c.exists() ? c.data().uid : ""; A.setDevMe(!!devUid && user && user.uid === devUid); A.renderTop(); A.checkAch(); A.refreshTab(); }).catch(() => {});
   listenFriends(); listenInvites(); listenRequests(); listenLobby(); rejoinRoom();
   A.refreshTab();
 }
 function onLogout() {
+  A.setDevMe(false);
   clearInterval(beatTimer); unsubs.forEach(u => u()); unsubs = []; friendUnsubs.forEach(u => u()); friendUnsubs = [];
   dropRoom(); lobbyRooms = []; friends.clear(); friendIds = []; invites.clear(); reqs.clear(); hiddenReq.clear(); renderInvites();
   A.refreshTab();
