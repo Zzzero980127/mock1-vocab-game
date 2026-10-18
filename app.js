@@ -8,6 +8,7 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.20.0", date: "2026-10-18", items: ["新增金幣成就（累積賺到 500／2000／5000／10000／30000 金幣）與寶石成就（累積 20／60／150／300／600 寶石）", "新增傳說成就「海納百川」：商店所有東西（遊戲、造型、頭像）全部購買才拿得到；之後商店有新商品，沒補買就會被收回，補買後恢復（寶石只發一次）"] },
   { v: "2.19.2", date: "2026-10-18", items: ["商店的造型和頭像改成依價格由低到高排列"] },
   { v: "2.19.1", date: "2026-10-18", items: ["房間大廳：房間裡的人全部離線（超過 2.5 分鐘沒心跳）就自動不再列出，不會再看到沒人的房間"] },
   { v: "2.19.0", date: "2026-10-18", items: ["新增 4 款網頁造型：薄荷、雪夜、夕陽、賽博（賽博用寶石）", "新增 18 個頭像（12 個金幣、6 個寶石）"] },
@@ -253,7 +254,19 @@ const ACH = [
   { id: "f5", name: "人氣王", desc: "加 5 位好友", title: "人氣王", gems: 8, tier: 1, p: () => [S.friendsN || 0, 5] },
   { id: "v1", name: "首勝", desc: "對戰贏 1 場", title: "初露鋒芒", gems: 3, tier: 0, p: () => [S.wins || 0, 1] },
   { id: "v10", name: "對戰常勝軍", desc: "對戰贏 10 場", title: "對戰常勝軍", gems: 15, tier: 3, p: () => [S.wins || 0, 10] },
+  { id: "c1", name: "小有積蓄", desc: "累積賺到 500 金幣（花掉的也算）", title: "小有積蓄", gems: 3, tier: 0, icon: "🪙", p: () => [S.cE || 0, 500] },
+  { id: "c2", name: "荷包滿滿", desc: "累積賺到 2000 金幣（花掉的也算）", title: "荷包滿滿", gems: 6, tier: 1, icon: "🪙", p: () => [S.cE || 0, 2000] },
+  { id: "c3", name: "金幣富翁", desc: "累積賺到 5000 金幣（花掉的也算）", title: "金幣富翁", gems: 12, tier: 2, icon: "🪙", p: () => [S.cE || 0, 5000] },
+  { id: "c4", name: "日進斗金", desc: "累積賺到 10000 金幣（花掉的也算）", title: "日進斗金", gems: 25, tier: 3, icon: "🪙", p: () => [S.cE || 0, 10000] },
+  { id: "c5", name: "富可敵國", desc: "累積賺到 30000 金幣（花掉的也算）", title: "富可敵國", gems: 50, tier: 4, icon: "🪙", p: () => [S.cE || 0, 30000] },
+  { id: "e1", name: "寶石入門", desc: "累積獲得 20 寶石（花掉的也算）", title: "寶石入門", gems: 3, tier: 0, icon: "💎", p: () => [S.gE || 0, 20] },
+  { id: "e2", name: "寶石收藏家", desc: "累積獲得 60 寶石（花掉的也算）", title: "寶石收藏家", gems: 6, tier: 1, icon: "💎", p: () => [S.gE || 0, 60] },
+  { id: "e3", name: "寶石大亨", desc: "累積獲得 150 寶石（花掉的也算）", title: "寶石大亨", gems: 12, tier: 2, icon: "💎", p: () => [S.gE || 0, 150] },
+  { id: "e4", name: "璀璨之星", desc: "累積獲得 300 寶石（花掉的也算）", title: "璀璨之星", gems: 25, tier: 3, icon: "💎", p: () => [S.gE || 0, 300] },
+  { id: "e5", name: "寶石之王", desc: "累積獲得 600 寶石（花掉的也算）", title: "寶石之王", gems: 50, tier: 4, icon: "💎", p: () => [S.gE || 0, 600] },
+  { id: "shopall", name: "海納百川", desc: "買齊商店裡所有東西（遊戲、造型、頭像）。商店有新商品時要補買，否則成就會被收回", title: "海納百川", gems: 200, tier: 5, dyn: true, icon: "🌊", p: () => { const k = shopKeys(); return [k.filter(owns).length, k.length]; }, note: () => { const k = shopKeys(); return `已擁有 ${k.filter(owns).length} / ${k.length}`; } },
 ];
+const shopKeys = () => [...MODES.filter(o => o.price).map(o => "game:" + o.m), ...SKINS.filter(s => s.price).map(s => "skin:" + s.k), ...AVATARS.filter(a => a[1]).map(a => "av:" + a[0])];
 const ACH_ICON = { welcome: "👋", g10: "🎮", g50: "🕹️", g200: "🔥", lv5: "🌱", lv10: "🌿", lv20: "🌳", lv30: "🏔️", lv40: "👑", lv50: "🌌", w100: "💯", wall: "📚", m15: "🏎️", m10: "🌩️", q2500: "🎯", q4500: "🏹", q4000: "🎓", mbook90: "📖", mbook: "🧠", m4000: "🏫", m6000: "🏛️", r300: "☄️", r600: "💥", s250: "✍️", s250f: "🖋️", l250: "👂", l4000: "🎧", s4000: "🔤", f1: "🤝", f5: "🎉", v1: "⚔️", v10: "🏆", dev: "⚡" };
 const achIcon = a => a.icon || ACH_ICON[a.id] || "🏆";   // 每個成就一個專屬小圖標
 const TIERS = [["普通", "var(--muted)"], ["稀有", "var(--cool)"], ["超稀有", "#4d8dff"], ["史詩", "#a56bff"], ["神話", "#ffc83d"], ["傳說", "#ff6ad5"], ["開發者", "#ff3fa4"]];
@@ -268,6 +281,9 @@ try { Object.assign(S, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (
 if (!S.first) S.first = {};   // 每個字「第一次作答」對或錯（1/0），算熟練度正確率用，之後重複作答不影響
 if (S.coins === undefined) S.coins = 100 + (lvOf(S.xp) - 1) * 60;   // 舊玩家補發已升過的等級
 S.owned = [...new Set([...FREE, ...(S.owned || [])])];
+{ const pr = (pre, f) => S.owned.reduce((n, k) => { const l = k.split(":"); return n + (l[0] === pre ? f(k.slice(l[0].length + 1)) : 0); }, 0);   // 舊玩家補算：目前持有 + 已花掉的
+  if (S.cE === undefined) S.cE = S.coins + pr("game", m => (MODES.find(o => o.m === m) || {}).price || 0) + pr("skin", k => { const s = SKINS.find(o => o.k === k); return s && s.cur !== "gem" ? s.price : 0; }) + pr("av", a => { const v = AVATARS.find(o => o[0] === a); return v && v[2] !== "gem" ? v[1] : 0; });
+  if (S.gE === undefined) S.gE = S.gems + pr("skin", k => { const s = SKINS.find(o => o.k === k); return s && s.cur === "gem" ? s.price : 0; }) + pr("av", a => { const v = AVATARS.find(o => o[0] === a); return v && v[2] === "gem" ? v[1] : 0; }); }
 if (!S.name) S.name = "玩家" + (1000 + Math.random() * 9000 | 0);
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} window.ONLINE?.dirty?.(); };
 const owns = k => S.owned.includes(k) || (isMeDev() && !k.startsWith("title:"));   // 作者：商店的遊戲、造型、頭像全部擁有（稱號仍要靠成就）
@@ -374,9 +390,9 @@ function gain(xp, extraCoins = 0) {
   const L1 = lvOf(S.xp); let bonus = 0;
   let gems = 0;
   for (let L = L0 + 1; L <= L1; L++) { bonus += 50 + 10 * L; gems += L % 5 ? 1 : 5; }
-  S.gems += gems;
+  S.gems += gems; S.gE = (S.gE || 0) + gems;
   const got = Math.round(xp / 3) + extraCoins + bonus;
-  S.coins += got; save(); renderTop();
+  S.coins += got; S.cE = (S.cE || 0) + got; save(); renderTop();
   if (L1 > L0) setTimeout(() => {
     sfx.levelup();
     modal(`<div class="big" style="font-size:34px">LEVEL UP</div><div class="av lg" style="margin:0 auto">${S.avatar}</div>
@@ -744,14 +760,23 @@ if (!DEV) { $("#logTab")?.remove(); $("#tab-log")?.remove(); $("#verText")?.remo
 const today = () => new Date().toLocaleDateString("sv");
 let achQ = [];
 function checkAch() {
-  let n = 0;
+  let n = 0, lost = 0;
   for (const a of ACH) {
-    if (S.ach[a.id]) continue;
+    if (S.ach[a.id]) {
+      if (a.dyn && a.p()[0] < a.p()[1]) {   // 動態成就（商店有新商品沒補買）：收回成就與稱號
+        delete S.ach[a.id]; lost++;
+        S.owned = S.owned.filter(k => k !== "title:" + a.title);
+        if (S.title === a.title) S.title = "單字新手";
+      }
+      continue;
+    }
     const [c, g] = a.p(); if (c < g) continue;
-    S.ach[a.id] = a.id === "welcome" ? S.joined : today(); S.gems += a.gems;
+    S.ach[a.id] = a.id === "welcome" ? S.joined : today();
+    if (!(S.gOnce || (S.gOnce = {}))[a.id]) { S.gOnce[a.id] = 1; S.gems += a.gems; S.gE = (S.gE || 0) + a.gems; }
     if (!owns("title:" + a.title)) S.owned.push("title:" + a.title);
     achQ.push(a); n++;
   }
+  if (lost) { save(); renderTop(); if (curTab === "ach") renderAch(); toast("商店有新商品，成就「海納百川」暫時收回，補買就會恢復"); }
   if (!n) return;
   save(); renderTop(); if (curTab === "ach") renderAch();
   if (achQ.length === n) popAch();
@@ -785,7 +810,7 @@ function popAch() {
 // 成就分區與成長鏈：每條鏈依序解鎖，畫面只顯示目前這一階，點卡片可預覽後面幾階。之後加二～五模就在 ACH_CATS 加一區、CHAINS 加一組
 const ACH_CATS = [["gen", "一般"], ["m1", "一模"], ["bank", "大考字庫"]];
 const CHAINS = {
-  gen: [["welcome"], ["g10", "g50", "g200"], ["lv5", "lv10", "lv20", "lv30", "lv40", "lv50"], ["w100"], ["m15"], ["q2500"], ["r300"], ["s250"], ["f1", "f5"], ["v1", "v10"], ["dev"]],
+  gen: [["welcome"], ["g10", "g50", "g200"], ["lv5", "lv10", "lv20", "lv30", "lv40", "lv50"], ["w100"], ["m15"], ["q2500"], ["r300"], ["s250"], ["f1", "f5"], ["v1", "v10"], ["c1", "c2", "c3", "c4", "c5"], ["e1", "e2", "e3", "e4", "e5"], ["shopall"], ["dev"]],
   m1: [["wall", "mbook90", "mbook"], ["m10"], ["q4500"], ["l250"], ["r600"], ["s250f"]],
   bank: [["m4000", "m6000"], ["q4000"], ["l4000"], ["s4000"]],
 };
@@ -844,7 +869,7 @@ const CUR = { coin: ["金幣", "var(--gold)", "coins"], gem: ["寶石", "var(--g
 function buy(k, price, btn, cur = "coin") {
   const [label, , field] = CUR[cur];
   if (S[field] < price) { sfx.bad(); toast(`${label}不夠，還差 ${price - S[field]}`); return; }
-  armed(btn, `確定花 ${price} ${label}？`, () => { S[field] -= price; S.owned.push(k); save(); sfx.coin(); toast("購買成功！"); hud(); renderShop(); });
+  armed(btn, `確定花 ${price} ${label}？`, () => { S[field] -= price; S.owned.push(k); save(); sfx.coin(); toast("購買成功！"); hud(); renderShop(); checkAch(); });
 }
 function renderShop() {
   const sec = (title, sub, items) => `<div class="card"><div class="bar"><h2>${title}</h2><span class="muted">${sub}</span></div><div class="shop">${items}</div></div>`;

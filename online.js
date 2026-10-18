@@ -58,7 +58,7 @@ function loginUI() {
 $("#loginBtn")?.addEventListener("click", e => { e.stopPropagation(); $("#loginMenu").hidden = !$("#loginMenu").hidden; });
 $("#loginMenu")?.addEventListener("click", e => { const b = e.target.closest("[data-lg]"); if (!b) return; $("#loginMenu").hidden = true; b.dataset.lg === "guest" ? loginGuest() : login(); });
 document.addEventListener("click", () => { const m = $("#loginMenu"); if (m) m.hidden = true; });
-const PROGRESS = ["xp", "coins", "gems", "best", "owned", "wrong", "games", "wins", "losses", "name", "avatar", "title", "showA", "skin", "lessons", "vsDay"];
+const PROGRESS = ["xp", "coins", "gems", "best", "owned", "wrong", "games", "wins", "losses", "name", "avatar", "title", "showA", "skin", "lessons", "vsDay", "cE", "gE", "gOnce"];
 function mergeBest(a = {}, b = {}) {
   const o = { ...a };
   for (const [k, v] of Object.entries(b)) o[k] = o[k] == null ? v : (k === "match" || k.startsWith("f_match")) ? Math.min(o[k], v) : Math.max(o[k], v);
@@ -107,7 +107,7 @@ function pub() {
   for (const [k, v] of Object.entries(S.best || {})) if (typeof v === "number") best[k] = v;
   return { name: S.name, avatar: S.avatar, title: S.title, showA: A.showA(), skin: S.skin, xp: S.xp, level: A.lvOf(S.xp), coins: S.coins, best,
     owned: S.owned, wrong: S.wrong, lessons: S.lessons, games: S.games || 0, wins: S.wins || 0, losses: S.losses || 0,
-    gems: S.gems || 0, ach: S.ach || {}, achN: Object.keys(S.ach || {}).length, known: S.known || {}, first: S.first || {}, vsDay: S.vsDay || null, joined: S.joined || "",
+    gems: S.gems || 0, cE: S.cE || 0, gE: S.gE || 0, gOnce: S.gOnce || {}, ach: S.ach || {}, achN: Object.keys(S.ach || {}).length, known: S.known || {}, first: S.first || {}, vsDay: S.vsDay || null, joined: S.joined || "",
     code: S.code || "", lastSeen: F.serverTimestamp(), updatedAt: F.serverTimestamp() };
 }
 async function push() {
