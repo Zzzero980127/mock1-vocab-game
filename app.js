@@ -7,6 +7,7 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.12.0", date: "2026-10-18", items: ["排行榜新增「金幣」「寶石」兩個榜", "作者帳號：商店的遊戲、造型、頭像全部直接擁有，商店裡仍顯示原價"] },
   { v: "2.11.2", date: "2026-10-18", items: ["櫻花造型改成夜色：深紫粉的夜空、月亮，背景長了四棵櫻花樹，花瓣會緩緩飄落（系統設「減少動態」時只畫靜態）"] },
   { v: "2.11.1", date: "2026-10-18", items: ["範圍加成：快問連擊、聽音選義、是非快答、拼字找碴、缺字補完、單字隕石的分數，會隨選的課數（大考字庫是級別數）線性加成——只選 1 課 ×1，全選 ×2（只練錯題本、好友對戰不加成）", "快問之王／大考快問王門檻因全選有 ×2 加成，調回 4500"] },
   { v: "2.11.0", date: "2026-10-18", items: ["計時模式改成階梯給分：把限時切成四等份，依序拿 100%／50%／25%／0% 的分數（連擊倍率照舊）。快問連擊、聽音選義、拼字找碴、缺字補完限時改 20 秒（是非快答仍 6 秒），單字隕石依擊碎時機拿 10／5／3／0 分", "分數整體變低，成就門檻同步調整：連擊大師 1250、快問之王／大考快問王 2250、隕石獵人 200、隕石毀滅者 400"] },
@@ -232,7 +233,7 @@ if (S.coins === undefined) S.coins = 100 + (lvOf(S.xp) - 1) * 60;   // 舊玩家
 S.owned = [...new Set([...FREE, ...(S.owned || [])])];
 if (!S.name) S.name = "玩家" + (1000 + Math.random() * 9000 | 0);
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} window.ONLINE?.dirty?.(); };
-const owns = k => S.owned.includes(k);
+const owns = k => S.owned.includes(k) || (isMeDev() && !k.startsWith("title:"));   // 作者：商店的遊戲、造型、頭像全部擁有（稱號仍要靠成就）
 
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const norm = s => s.toLowerCase().replace(/[….]+/g, " ").replace(/\s+/g, " ").trim();
@@ -692,7 +693,7 @@ function buy(k, price, btn, cur = "coin") {
 function renderShop() {
   const sec = (title, sub, items) => `<div class="card"><div class="bar"><h2>${title}</h2><span class="muted">${sub}</span></div><div class="shop">${items}</div></div>`;
   const btn = (k, price, on, use, cur = "coin") => owns(k)
-    ? (use ? `<button class="btn small ${on ? "green" : "ghost"}" data-use="${esc(k)}" type="button">${on ? "使用中" : "使用"}</button>` : `<span class="muted">已解鎖</span>`)
+    ? (isMeDev() ? `<span class="price" style="color:${CUR[cur][1]};opacity:.7">${price} ${CUR[cur][0]}</span>` : "") + (use ? `<button class="btn small ${on ? "green" : "ghost"}" data-use="${esc(k)}" type="button">${on ? "使用中" : "使用"}</button>` : `<span class="muted">已解鎖</span>`)
     : `<span class="price" style="color:${CUR[cur][1]}">${price} ${CUR[cur][0]}</span><button class="btn small ${cur === "gem" ? "gemb" : ""}" data-buy="${esc(k)}" data-p="${price}" data-cur="${cur}" type="button">購買</button>`;
   const skin = s => `<div class="item ${S.skin === s.k ? "on" : ""}"><span class="swatch">${s.sw.map(c => `<i style="background:${c}"></i>`).join("")}</span><b>${s.name}</b><small>${s.desc}</small>${btn("skin:" + s.k, s.price, S.skin === s.k, 1, s.cur)}</div>`;
   const av = ([a, p, cur]) => `<div class="item ${S.avatar === a ? "on" : ""}"><span class="ico">${a}</span>${btn("av:" + a, p, S.avatar === a, 1, cur)}</div>`;

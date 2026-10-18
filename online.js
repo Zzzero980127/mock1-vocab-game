@@ -590,13 +590,14 @@ function renderVs(box) {
   const inp = $("#fcode"); if (inp) inp.onkeydown = e => { if (e.key === "Enter") addFriend(inp.value); };
 }
 const CATS = [["xp", "等級", "desc"], ["best.quiz", "快問連擊", "desc"], ["best.rock", "單字隕石", "desc"], ["best.spell", "拼字工坊", "desc"],
-  ["best.listen", "聽音拼字", "desc"], ["best.match", "配對最快", "asc"], ["wins", "對戰勝場", "desc"], ["achN", "成就數", "desc"]];
+  ["best.listen", "聽音拼字", "desc"], ["best.match", "配對最快", "asc"], ["wins", "對戰勝場", "desc"], ["achN", "成就數", "desc"], ["coins", "金幣", "desc"], ["gems", "寶石", "desc"]];
 const getPath = (d, p) => p.split(".").reduce((o, k) => o?.[k], d);
 function fmt(cat, d) {
   const v = getPath(d, cat);
   if (cat === "xp") return `Lv ${A.lvOf(v || 0)}<small class="muted"> ${v || 0} XP</small>`;
   if (cat === "best.match") return `${v.toFixed(1)} 秒`;
   if (cat === "achN") return `${v || 0} 個`;
+  if (cat === "coins" || cat === "gems") return `${v || 0} ${cat === "coins" ? "金幣" : "寶石"}`;
   return cat === "wins" ? `${v || 0} 勝` : `${v} 分`;
 }
 async function renderRank(box) {
@@ -611,7 +612,7 @@ async function renderRank(box) {
   try {
     if (rankScope === "friends") {
       rows = [[user.uid, pub()], ...friendIds.map(id => [id, friends.get(id)]).filter(([, d]) => d)]
-        .filter(([, d]) => cat === "xp" || cat === "wins" || cat === "achN" || getPath(d, cat) != null);
+        .filter(([, d]) => cat === "xp" || cat === "wins" || cat === "achN" || cat === "coins" || cat === "gems" || getPath(d, cat) != null);
       rows.sort((x, y) => (dir === "asc" ? 1 : -1) * ((getPath(x[1], cat) || 0) - (getPath(y[1], cat) || 0)));
     } else {
       const c = rankCache[cat];
