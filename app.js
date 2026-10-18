@@ -8,6 +8,7 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.15.2", date: "2026-10-18", items: ["效能：熔岩造型閒置時不再運算、餘燼改 GPU 動畫；星塵／螢火蟲等特效降低光暈成本"] },
   { v: "2.15.1", date: "2026-10-18", items: ["修正星空造型造成的卡頓（開題數選單、切換分頁變慢）：星星漂移改用 GPU 動畫，不再每幀重繪整頁"] },
   { v: "2.18.2", date: "2026-10-18", items: ["修正房間對戰：先打完的人會一直等其他人，不再 90 秒就自動判定勝利；等超過 30 秒會出現「不等了，直接結算」，沒打完的人算未完成、不給獎勵", "房主按開始時，如果對方在別的瀏覽器分頁：分頁標題會閃「對戰開始了」＋提示音；分頁在背景的時間不會算進作答時間"] },
   { v: "2.18.1", date: "2026-10-18", items: ["展示成就上方新增 5 個預覽框，看得到目前選了哪幾個，點框內圖標可取消；「配對快手」改用 🏎️ 避免和開發者圖標重複"] },
@@ -453,7 +454,7 @@ const FX = {
   gold: { n: 80, make: (w, h, i) => ({ x: Math.random() * w, y: i ? Math.random() * h : -10, vx: (Math.random() - .5) * .4, vy: .35 + Math.random() * .9, s: 1 + Math.random() * 2.4, ph: Math.random() * 6.3, c: ["#ffd166", "#ffe9a8", "#e8b64c"][Math.random() * 3 | 0] }),
     draw(g, p, w, h) {
       p.ph += .06; p.x += p.vx + Math.sin(p.ph * .5) * .3; p.y += p.vy;
-      g.globalAlpha = .35 + .65 * Math.abs(Math.sin(p.ph)); g.fillStyle = g.strokeStyle = g.shadowColor = p.c; g.shadowBlur = 6;
+      g.globalAlpha = .35 + .65 * Math.abs(Math.sin(p.ph)); g.fillStyle = g.strokeStyle = g.shadowColor = p.c; g.shadowBlur = 4;
       g.beginPath(); g.arc(p.x, p.y, p.s, 0, 6.3); g.fill();
       if (p.s > 2.2) { g.lineWidth = 1; g.beginPath(); g.moveTo(p.x - p.s * 3, p.y); g.lineTo(p.x + p.s * 3, p.y); g.moveTo(p.x, p.y - p.s * 3); g.lineTo(p.x, p.y + p.s * 3); g.stroke(); }
       return p.y < h + 10;
@@ -462,7 +463,7 @@ const FX = {
     draw(g, p, w, h) {
       p.ph += .03; p.x += p.vx + Math.sin(p.ph) * .4; p.y += p.vy + Math.cos(p.ph * .7) * .3;
       if (p.x < -10) p.x = w + 10; if (p.x > w + 10) p.x = -10; if (p.y < -10) p.y = h + 10; if (p.y > h + 10) p.y = -10;
-      g.globalAlpha = .25 + .75 * Math.sin(p.ph * .8) ** 2; g.fillStyle = "#e4ff8a"; g.shadowColor = "#c8ff4a"; g.shadowBlur = 14;
+      g.globalAlpha = .25 + .75 * Math.sin(p.ph * .8) ** 2; g.fillStyle = "#e4ff8a"; g.shadowColor = "#c8ff4a"; g.shadowBlur = 6;
       g.beginPath(); g.arc(p.x, p.y, p.s, 0, 6.3); g.fill(); return true;
     } },
   ocean: { n: 40, make: (w, h, i) => ({ x: Math.random() * w, y: i ? Math.random() * h : h + 12, vy: -(.4 + Math.random() * .9), s: 2 + Math.random() * 6, ph: Math.random() * 6.3 }),
@@ -473,7 +474,7 @@ const FX = {
     } },
   neon: { n: 30, make: (w, h, i) => ({ x: Math.random() * w, y: i ? Math.random() * h : h + 20, vy: -(.5 + Math.random() * 1.2), s: 3 + Math.random() * 8, rot: Math.random() * 6.3, vr: (Math.random() - .5) * .04, c: Math.random() < .5 ? "#ff3fa4" : "#2ff3e0" }),
     draw(g, p) {
-      p.y += p.vy; p.rot += p.vr; g.globalAlpha = .7; g.strokeStyle = g.shadowColor = p.c; g.shadowBlur = 10; g.lineWidth = 1.5;
+      p.y += p.vy; p.rot += p.vr; g.globalAlpha = .7; g.strokeStyle = g.shadowColor = p.c; g.shadowBlur = 5; g.lineWidth = 1.5;
       g.translate(p.x, p.y); g.rotate(p.rot); g.strokeRect(-p.s, -p.s, p.s * 2, p.s * 2); return p.y > -30;
     } },
 };
@@ -536,6 +537,8 @@ function lavaCanvas(on) {
     if (t - last < 33) return; last = t;
     for (const o of sides) {
       if (t > o.nextAt && !o.emit) { o.emit = 50 + Math.random() * 20 | 0; o.P = h * (.5 + Math.random() * .3); o.x0 = o.d < 0 ? 120 + Math.random() * 200 : W_ - 120 - Math.random() * 200; o.nextAt = t + 14000 + Math.random() * 12000; }
+      if (!o.emit && !o.ps.length) { if (o.cv.style.visibility !== "hidden") { o.g.clearRect(0, 0, W_, h); o.cv.style.visibility = "hidden"; } continue; }   // 閒置時整張隱藏，goo 濾鏡就不用運算
+      o.cv.style.visibility = "";
       if (o.emit) { o.emit--; for (let i = 0; i < 2; i++) o.ps.push({ x: o.x0 + (Math.random() - .5) * 30, y: h + 24, vx: (Math.random() - .5) * .5, vy: 0, V: Math.sqrt(2 * gr * o.P * (.85 + Math.random() * .15)), k: Math.random() < .4 ? 0 : .15 + Math.random() * .7, r: 20 + Math.random() * 10, top: false }); }
       const g = o.g; g.clearRect(0, 0, W_, h);
       o.ps = o.ps.filter(p => p.y < h + 40);
