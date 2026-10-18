@@ -8,6 +8,7 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.16.1", date: "2026-10-18", items: ["個人資料的稱號、展示稱號按鈕依稀有度上色（史詩紫、神話金、傳說彩虹），一眼看出哪個比較帥"] },
   { v: "2.16.0", date: "2026-10-18", items: ["成就分成「一般」「一模」「大考字庫」三區（之後二～五模會各有一區）", "成就改成成長制：同一系列只顯示目前這一階，解完才出現下一階，點卡片可預覽後面的階段"] },
   { v: "2.15.0", date: "2026-10-18", items: ["個人資料新增「展示稱號」：最多選 5 個稱號，好友清單和排行榜會顯示給其他人看"] },
   { v: "2.14.3", date: "2026-10-18", items: ["「一模霸主」（336 字累積答對）比「一模熟讀者」簡單，稀有度降為史詩、獎勵 15 寶石"] },
@@ -822,9 +823,9 @@ function renderMe() {
     <label class="muted" for="nameIn">暱稱（最多 12 字，好友和排行榜會看到）</label>
     <div class="type"><input class="field" id="nameIn" maxlength="12" value="${esc(S.name)}"><button class="btn" id="nameSave" type="button">儲存</button></div></div>
     <div class="card"><h2>頭像</h2><div class="chips">${AVATARS.filter(([a]) => owns("av:" + a)).map(([a]) => `<button class="chip" style="font-size:22px" data-use="av:${a}" aria-pressed="${S.avatar === a}">${a}</button>`).join("")}</div>
-      <h2>稱號</h2><div class="chips">${myTitles().map(t => `<button class="chip" data-use="title:${esc(t)}" aria-pressed="${S.title === t}">${esc(t)}</button>`).join("")}</div>
+      <h2>稱號</h2><div class="chips">${myTitles().map(t => `<button class="chip" data-use="title:${esc(t)}" aria-pressed="${S.title === t}">${titleHtml(t, isMeDev())}</button>`).join("")}</div>
       <p class="muted" style="margin:0">稱號靠解鎖成就取得，到「成就」頁看還有哪些。</p>
-      <h2>展示稱號（${showT().length}/5）</h2><div class="chips">${myTitles().map(t => `<button class="chip" data-show="${esc(t)}" aria-pressed="${showT().includes(t)}">${esc(t)}</button>`).join("")}</div>
+      <h2>展示稱號（${showT().length}/5）</h2><div class="chips">${myTitles().map(t => `<button class="chip" data-show="${esc(t)}" aria-pressed="${showT().includes(t)}">${titleHtml(t, isMeDev())}</button>`).join("")}</div>
       <p class="muted" style="margin:0">最多選 5 個，好友清單和排行榜會顯示給其他人看。</p>
       <h2>網頁造型</h2><div class="chips">${SKINS.filter(s => owns("skin:" + s.k)).map(s => `<button class="chip" data-use="skin:${s.k}" aria-pressed="${S.skin === s.k}">${s.name}</button>`).join("")}</div>
       <p class="muted" style="margin:0">更多頭像和造型在商店買。</p></div>
