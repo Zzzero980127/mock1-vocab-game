@@ -8,6 +8,7 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.14.3", date: "2026-10-18", items: ["「一模霸主」（336 字累積答對）比「一模熟讀者」簡單，稀有度降為史詩、獎勵 15 寶石"] },
   { v: "2.14.2", date: "2026-10-18", items: ["成就稀有度顏色調整：史詩紫色、神話金色、傳說彩虹"] },
   { v: "2.14.1", date: "2026-10-18", items: ["成就改名：升到 Lv 20 改叫「二十級霸主」，336 個課本單字全部答對改叫「一模霸主」（原「單字之神」）"] },
   { v: "2.14.0", date: "2026-10-18", items: ["課本字庫分成「一模（一＋二冊）」「第一冊」「第二冊」：點冊別只顯示該冊課次，點「一模」自動選好一、二冊全部課次"] },
@@ -206,7 +207,7 @@ const ACH = [
   { id: "lv10", name: "十全十美", desc: "升到 Lv 10", title: "十級玩家", gems: 8, tier: 1, p: () => [lvOf(S.xp), 10] },
   { id: "lv20", name: "二十級霸主", desc: "升到 Lv 20", title: "二十級霸主", gems: 20, tier: 2, p: () => [lvOf(S.xp), 20] },
   { id: "w100", name: "百字斬", desc: "答對過 100 個不同的單字", title: "百字斬", gems: 5, tier: 1, p: () => [knownN(), 100] },
-  { id: "wall", name: "一模霸主", desc: "336 個一模課本單字全部答對過", title: "一模霸主", gems: 30, tier: 4, p: () => [Object.keys(S.known || {}).filter(i => i < BOOKN).length, BOOKN] },
+  { id: "wall", name: "一模霸主", desc: "336 個一模課本單字全部答對過", title: "一模霸主", gems: 15, tier: 2, p: () => [Object.keys(S.known || {}).filter(i => i < BOOKN).length, BOOKN] },
   { id: "m15", name: "配對快手", desc: "配對消除 15 秒內完成", title: "配對快手", gems: 5, tier: 1, p: () => [S.best.match && S.best.match <= 15 ? 1 : 0, 1] },
   { id: "m10", name: "閃電配對", desc: "字庫選課本 336 字全部課次，配對消除 8 秒內完成", title: "閃電手", gems: 10, tier: 2, p: () => [fb("match") && fb("match") <= 8 ? 1 : 0, 1] },
   { id: "q2500", name: "連擊大師", desc: "快問連擊拿到 1250 分", title: "連擊大師", gems: 5, tier: 1, p: () => [S.best.quiz || 0, 1250] },
