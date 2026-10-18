@@ -58,7 +58,7 @@ function loginUI() {
 $("#loginBtn")?.addEventListener("click", e => { e.stopPropagation(); $("#loginMenu").hidden = !$("#loginMenu").hidden; });
 $("#loginMenu")?.addEventListener("click", e => { const b = e.target.closest("[data-lg]"); if (!b) return; $("#loginMenu").hidden = true; b.dataset.lg === "guest" ? loginGuest() : login(); });
 document.addEventListener("click", () => { const m = $("#loginMenu"); if (m) m.hidden = true; });
-const PROGRESS = ["xp", "coins", "gems", "best", "owned", "wrong", "games", "wins", "losses", "name", "avatar", "title", "showA", "skin", "lessons", "vsDay", "cE", "gE", "gOnce"];
+const PROGRESS = ["xp", "coins", "gems", "best", "owned", "wrong", "games", "wins", "losses", "name", "avatar", "title", "showA", "skin", "lessons", "vsDay", "cE", "gE", "gOnce", "playSec"];
 function mergeBest(a = {}, b = {}) {
   const o = { ...a };
   for (const [k, v] of Object.entries(b)) o[k] = o[k] == null ? v : (k === "match" || k.startsWith("f_match")) ? Math.min(o[k], v) : Math.max(o[k], v);
@@ -71,8 +71,10 @@ async function onLogin() {
     if (snap.exists()) {
       const c = snap.data();
       const best = mergeBest(S.best, c.best), owned = [...new Set([...A.FREE, ...(S.owned || []), ...(c.owned || [])])];
+      const ps = Math.max(S.playSec || 0, c.playSec || 0);   // 遊戲時間只會增加：取較大的，不被舊存檔蓋掉
       if ((c.xp || 0) >= S.xp) PROGRESS.forEach(k => { if (c[k] !== undefined) S[k] = c[k]; });
       S.best = best; S.owned = owned; S.code = c.code;
+      S.playSec = ps;
       S.ach = { ...(S.ach || {}), ...(c.ach || {}) }; S.known = { ...(S.known || {}), ...(c.known || {}) }; S.first = { ...(c.first || {}), ...(S.first || {}) };
       if (c.joined) S.joined = c.joined;
     }
@@ -107,7 +109,7 @@ function pub() {
   for (const [k, v] of Object.entries(S.best || {})) if (typeof v === "number") best[k] = v;
   return { name: S.name, avatar: S.avatar, title: S.title, showA: A.showA(), skin: S.skin, xp: S.xp, level: A.lvOf(S.xp), coins: S.coins, best,
     owned: S.owned, wrong: S.wrong, lessons: S.lessons, games: S.games || 0, wins: S.wins || 0, losses: S.losses || 0,
-    gems: S.gems || 0, cE: S.cE || 0, gE: S.gE || 0, gOnce: S.gOnce || {}, ach: S.ach || {}, achN: Object.keys(S.ach || {}).length, known: S.known || {}, first: S.first || {}, vsDay: S.vsDay || null, joined: S.joined || "",
+    gems: S.gems || 0, playSec: S.playSec || 0, cE: S.cE || 0, gE: S.gE || 0, gOnce: S.gOnce || {}, ach: S.ach || {}, achN: Object.keys(S.ach || {}).length, known: S.known || {}, first: S.first || {}, vsDay: S.vsDay || null, joined: S.joined || "",
     code: S.code || "", lastSeen: F.serverTimestamp(), updatedAt: F.serverTimestamp() };
 }
 async function push() {
@@ -625,12 +627,13 @@ function renderVs(box) {
   const inp = $("#fcode"); if (inp) inp.onkeydown = e => { if (e.key === "Enter") addFriend(inp.value); };
 }
 const CATS = [["xp", "等級", "desc"], ["best.quiz", "快問連擊", "desc"], ["best.rock", "單字隕石", "desc"], ["best.spell", "拼字工坊", "desc"],
-  ["best.listen", "聽音拼字", "desc"], ["best.all", "一模全字挑戰", "desc"], ["best.match", "配對最快", "asc"], ["wins", "對戰勝場", "desc"], ["achN", "成就數", "desc"], ["coins", "金幣", "desc"], ["gems", "寶石", "desc"]];
+  ["best.listen", "聽音拼字", "desc"], ["best.all", "一模全字挑戰", "desc"], ["best.match", "配對最快", "asc"], ["wins", "對戰勝場", "desc"], ["achN", "成就數", "desc"], ["coins", "金幣", "desc"], ["gems", "寶石", "desc"], ["playSec", "遊戲時間", "desc"]];
 const getPath = (d, p) => p.split(".").reduce((o, k) => o?.[k], d);
 function fmt(cat, d) {
   const v = getPath(d, cat);
   if (cat === "xp") return `Lv ${A.lvOf(v || 0)}<small class="muted"> ${v || 0} XP</small>`;
   if (cat === "best.match") return `${v.toFixed(1)} 秒`;
+  if (cat === "playSec") return A.fmtPlay(v);
   if (cat === "achN") return `${v || 0} 個`;
   if (cat === "coins" || cat === "gems") return `${v || 0} ${cat === "coins" ? "金幣" : "寶石"}`;
   if (cat === "best.all" && d.best?.perfect336) return `${v} 分 <b style="color:var(--gold)">全對</b>`;
@@ -648,7 +651,7 @@ async function renderRank(box) {
   try {
     if (rankScope === "friends") {
       rows = [[user.uid, pub()], ...friendIds.map(id => [id, friends.get(id)]).filter(([, d]) => d)]
-        .filter(([, d]) => cat === "xp" || cat === "wins" || cat === "achN" || cat === "coins" || cat === "gems" || getPath(d, cat) != null);
+        .filter(([, d]) => cat === "xp" || cat === "wins" || cat === "achN" || cat === "coins" || cat === "gems" || cat === "playSec" || getPath(d, cat) != null);
       rows.sort((x, y) => (dir === "asc" ? 1 : -1) * ((getPath(x[1], cat) || 0) - (getPath(y[1], cat) || 0)));
     } else {
       const c = rankCache[cat];

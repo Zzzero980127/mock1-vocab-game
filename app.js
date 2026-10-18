@@ -8,6 +8,7 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.22.0", date: "2026-10-18", items: ["新增「遊戲時間」：只算頁面開著、而且最近 1 分鐘內有操作的時間（掛機、切到別的分頁不算），個人資料看得到，排行榜新增「遊戲時間」榜"] },
   { v: "2.21.4", date: "2026-10-18", items: ["排行榜「一模全字挑戰」：拿過 336 題全對的玩家，分數後面標示「全對」"] },
   { v: "2.21.3", date: "2026-10-18", items: ["修正錯題本重新整理後又變回舊的：雲端存檔用疊加方式寫入，答對刪掉的錯題一直留在雲端、下次登入又被蓋回來；改成整份取代"] },
   { v: "2.21.2", date: "2026-10-18", items: ["選擇題避免出現「意思相同」的選項：中文釋義有相同片段（如 決定／相信／因此／事實上）的字不會同時當選項，不再有兩個都對的題目"] },
@@ -972,6 +973,7 @@ function renderMe() {
       <p class="muted" style="margin:0">更多頭像和造型在商店買。</p></div>
     <div class="card"><h2>我的紀錄</h2><div class="tbl"><table>
       <tr><th>項目</th><th>紀錄</th></tr>
+      <tr><td>遊戲時間</td><td>${fmtPlay(S.playSec)}</td></tr>
       ${MODES.map(o => `<tr><td>${o.name}</td><td>${owns("game:" + o.m) ? bestText(o.m) : "未解鎖"}</td></tr>`).join("")}
       <tr><td>總遊戲場數</td><td>${S.games}</td></tr><tr><td>對戰</td><td>${S.wins} 勝 ${S.losses} 敗</td></tr>
       <tr><td>答對過的單字</td><td>${knownN()} / ${W.length}</td></tr>
@@ -1415,5 +1417,16 @@ function playListen(P) {
 
 $("#total")?.replaceChildren(String(BOOKN));
 applySkin(); renderChips(); hud(); renderLogDot(); setTimeout(checkAch, 800);
-window.APP = { setDevMe(v) { devMe = !!v; try { localStorage.setItem("mock1-devme", devMe ? "1" : "0"); } catch (e) {} }, get S() { return S; }, set S(v) { S = v; }, save, checkAch, nameHtml, titleHtml, showcaseHtml, showA, DEV_CODE, toast, sfx, modal, esc, lvOf, gain, owns, FREE, renderTop, hud, applySkin, renderChips,
+/* ---------- 遊戲時間：頁面在前景、且最近 60 秒內有操作才計算 ---------- */
+let lastAct = Date.now(), lastSave = Date.now();
+["pointerdown", "keydown", "touchstart", "wheel"].forEach(ev => addEventListener(ev, () => { lastAct = Date.now(); }, { passive: true, capture: true }));
+setInterval(() => {
+  if (document.hidden || Date.now() - lastAct > 60000) return;
+  S.playSec = (S.playSec || 0) + 5;
+  if (Date.now() - lastSave > 60000) { lastSave = Date.now(); save(); }
+}, 5000);
+addEventListener("pagehide", () => save());
+document.addEventListener("visibilitychange", () => { if (document.hidden) save(); });
+const fmtPlay = sec => { const m = Math.floor((sec || 0) / 60); return m < 60 ? `${m} 分鐘` : `${Math.floor(m / 60)} 小時 ${m % 60} 分`; };
+window.APP = { fmtPlay, setDevMe(v) { devMe = !!v; try { localStorage.setItem("mock1-devme", devMe ? "1" : "0"); } catch (e) {} }, get S() { return S; }, set S(v) { S = v; }, save, checkAch, nameHtml, titleHtml, showcaseHtml, showA, DEV_CODE, toast, sfx, modal, esc, lvOf, gain, owns, FREE, renderTop, hud, applySkin, renderChips,
   refreshTab, showTab, openStage, topBar, home, LESSONS, WORDS_BOOK: () => W.filter(x => !x.b), missedTable, playQuiz, makeVsQuestions, armed, get tab() { return curTab; } };
