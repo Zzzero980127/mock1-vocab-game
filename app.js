@@ -8,6 +8,7 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.22.2", date: "2026-10-18", items: ["「一模熟讀者」改成題數選 100 題、正確率 90% 以上（原本 50 題）；舊的 50 題正確率不再計入，要重打"] },
   { v: "2.22.1", date: "2026-10-18", items: ["一模全字挑戰：題目固定為「看英文、選中文」（以前會隨機出中文選英文）"] },
   { v: "2.22.0", date: "2026-10-18", items: ["新增「遊戲時間」：只算頁面開著、而且最近 1 分鐘內有操作的時間（掛機、切到別的分頁不算），個人資料看得到，排行榜新增「遊戲時間」榜"] },
   { v: "2.21.4", date: "2026-10-18", items: ["排行榜「一模全字挑戰」：拿過 336 題全對的玩家，分數後面標示「全對」"] },
@@ -248,7 +249,7 @@ const ACH = [
   { id: "q2500", name: "連擊大師", desc: "快問連擊拿到 1250 分", title: "連擊大師", gems: 5, tier: 1, p: () => [S.best.quiz || 0, 1250] },
   { id: "q4500", name: "快問之王", desc: "字庫選課本 336 字、全部課次全選，快問連擊拿到 4500 分", title: "快問之王", gems: 12, tier: 3, p: () => [fb("quiz") || 0, 4500] },
   { id: "q4000", name: "大考快問王", desc: "字庫選大考 4000（Lv1～4 全選），快問連擊拿到 4500 分", title: "大考快問王", gems: 20, tier: 5, p: () => [fb("quiz", "c4000") || 0, 4500] },
-  { id: "mbook90", name: "一模熟讀者", desc: "字庫選課本 336 字、全部課次，題數選 50 題，在快問連擊、聽音選義、是非快答、拼字找碴、缺字補完任一模式正確率 90% 以上", title: "一模熟讀者", gems: 40, tier: 4, p: () => [Math.min(90, S.best.m90acc || 0), 90], note: () => `50 題最高正確率 ${S.best.m90acc || 0}%` },
+  { id: "mbook90", name: "一模熟讀者", desc: "字庫選課本 336 字、全部課次，題數選 100 題，在快問連擊、聽音選義、是非快答、拼字找碴、缺字補完任一模式正確率 90% 以上", title: "一模熟讀者", gems: 40, tier: 4, p: () => [Math.min(90, S.best.m100acc || 0), 90], note: () => `100 題最高正確率 ${S.best.m100acc || 0}%` },
   { id: "mbook", name: "一模滿分腦", desc: "在「一模全字挑戰」一次 336 題全部答對，一題都不能錯", title: "一模滿分腦", gems: 150, tier: 5, icon: "🧠", p: () => [S.best.perfect336 ? 1 : 0, 1] },
   { id: "m4000", name: "四千單通關", desc: "大考 4000 字（Lv1～4）全部考過，第一次作答正確率 90% 以上", title: "四千單達人", gems: 60, tier: 5, p: masteryP("c4000", .9), note: masteryNote("c4000") },
   { id: "m6000", name: "六千單宗師", desc: "大考 6000 字（Lv1～6）全部考過，第一次作答正確率 90% 以上", title: "六千單宗師", gems: 120, tier: 5, p: masteryP("c6000", .9), note: masteryNote("c6000") },
@@ -1185,7 +1186,7 @@ function playQuiz(P, vs, kind = "quiz") {
       const best = !S.best[kind] || score > S.best[kind]; if (best) S.best[kind] = score;
       recFull(kind, score);
       if (kind === "all" && right === qs.length) S.best.perfect336 = 1;
-      if (kind !== "all" && S.nq === 50 && qs.length === 50 && S.bank === "book" && !S.wrongOnly && LESSONS.every(l => S.lessons.includes(l))) S.best.m90acc = Math.max(S.best.m90acc || 0, Math.round(right / 50 * 100));
+      if (kind !== "all" && S.nq === 100 && qs.length === 100 && S.bank === "book" && !S.wrongOnly && LESSONS.every(l => S.lessons.includes(l))) S.best.m100acc = Math.max(S.best.m100acc || 0, Math.round(right / 100 * 100));
       return result(kind, score, `答對 ${right}/${qs.length}${best ? "・新紀錄！" : ""}`, missed, right * 4);
     }
     const x = qs[i], q = Q[i], k = q.k || "quiz", enQ = !!q.enQ; locked = false;
