@@ -8,6 +8,7 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.21.2", date: "2026-10-18", items: ["選擇題避免出現「意思相同」的選項：中文釋義有相同片段（如 決定／相信／因此／事實上）的字不會同時當選項，不再有兩個都對的題目"] },
   { v: "2.21.2", date: "2026-10-18", items: ["背景預覽頁分成「金幣」「寶石」「成就限定」三個分頁，各自依價格排序"] },
   { v: "2.21.1", date: "2026-10-18", items: ["背景預覽頁的造型也依價格排序（免費→金幣由低到高→寶石由低到高→成就專屬）"] },
   { v: "2.21.0", date: "2026-10-18", items: ["新增專屬造型「海納百川」（浮世繪「神奈川沖浪裏」風：巨浪、富士山、流動的青海波）：只有解鎖成就「海納百川」才能使用，不在商店賣", "新增「背景」分頁：所有網頁造型一覽、取得方式與價格，並可先預覽", "商店最下面新增「兌換所」：金幣和寶石可以互換（不算進「海納百川」）"] },
@@ -1054,6 +1055,9 @@ function misspell(w) {
   for (let t = 0; t < 40 && out.size < 3; t++) { const r = tries[Math.random() * tries.length | 0](); if (r !== w.toLowerCase() && r.length >= 3) out.add(w[0] === w[0].toUpperCase() ? r[0].toUpperCase() + r.slice(1) : r); }
   return [...out];
 }
+// 意思相同判斷：中文釋義拆成片段（；，、/），去掉括號與結尾「的／地」後，有片段相同或一個包含另一個（≥2 字）就算同義，選項不會同時出現
+const meanSegs = x => x._ms || (x._ms = x.c.replace(/[（(][^）)]*[）)]/g, "").split(/[；;，,、\/]/).map(t => t.trim().replace(/[的地]$/, "")).filter(Boolean));
+const sameMean = (a, b) => a.w === b.w || a.c === b.c || meanSegs(a).some(p => meanSegs(b).some(q => p === q || (p.length >= 2 && q.length >= 2 && (p.includes(q) || q.includes(p)))));
 function mkQ(kind, x, dist) {
   let k = kind;
   if (k === "mix") k = MC_KINDS[Math.random() * MC_KINDS.length | 0];
@@ -1061,7 +1065,7 @@ function mkQ(kind, x, dist) {
   if ((k === "spot" || k === "blank") && !wordOk) k = "quiz";
   const enQ = k === "hear" ? true : Math.random() < .5;
   if (k === "tf") {
-    const t = Math.random() < .5 ? x : pick(dist.filter(y => y.c !== x.c && y.w !== x.w), 1, ["c"])[0];
+    const t = Math.random() < .5 ? x : pick(dist.filter(y => !sameMean(x, y)), 1, ["c"])[0];
     return { k, id: x.id, t: t.id };
   }
   if (k === "spot") {
@@ -1072,7 +1076,7 @@ function mkQ(kind, x, dist) {
     const w = x.w.toLowerCase(), i = 1 + Math.random() * (w.length - 1) | 0, ch = w[i], pool = (VOW.includes(ch) ? VOW : CON).split("").filter(c => c !== ch);
     const o = shuffle([ch, ...shuffle(pool).slice(0, 3)]); return { k, id: x.id, b: i, o, a: o.indexOf(ch) };
   }
-  const others = pick(dist.filter(y => y.c !== x.c && y.w !== x.w), 3, [enQ ? "c" : "w"]);
+  const others = pick(dist.filter(y => !sameMean(x, y)), 3, [enQ ? "c" : "w"]);
   return { k, id: x.id, enQ, o: shuffle([x, ...others]).map(y => y.id) };
 }
 function makeQs(kind, items, dist, n) { return pick(items, Math.min(n, items.length), ["w"], true).map(x => mkQ(kind, x, dist)); }
