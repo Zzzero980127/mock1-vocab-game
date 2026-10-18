@@ -7,6 +7,7 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.11.2", date: "2026-10-18", items: ["櫻花造型改成夜色：深紫粉的夜空、月亮，背景長了四棵櫻花樹，花瓣會緩緩飄落（系統設「減少動態」時只畫靜態）"] },
   { v: "2.11.1", date: "2026-10-18", items: ["範圍加成：快問連擊、聽音選義、是非快答、拼字找碴、缺字補完、單字隕石的分數，會隨選的課數（大考字庫是級別數）線性加成——只選 1 課 ×1，全選 ×2（只練錯題本、好友對戰不加成）", "快問之王／大考快問王門檻因全選有 ×2 加成，調回 4500"] },
   { v: "2.11.0", date: "2026-10-18", items: ["計時模式改成階梯給分：把限時切成四等份，依序拿 100%／50%／25%／0% 的分數（連擊倍率照舊）。快問連擊、聽音選義、拼字找碴、缺字補完限時改 20 秒（是非快答仍 6 秒），單字隕石依擊碎時機拿 10／5／3／0 分", "分數整體變低，成就門檻同步調整：連擊大師 1250、快問之王／大考快問王 2250、隕石獵人 200、隕石毀滅者 400"] },
   { v: "2.10.0", date: "2026-10-18", items: ["熔岩噴泉：每團岩漿各自決定散開的高度，有的衝到頂點、有的半途就向旁邊散開回落"] },
@@ -162,7 +163,7 @@ const MODES = [
 ];
 const SKINS = [
   { k: "default", name: "預設", desc: "跟著系統深淺色", price: 0, sw: ["#eef1f8", "#ff6a1a", "#0a9c95"] },
-  { k: "sakura", name: "櫻花", desc: "粉嫩春天", price: 120, sw: ["#fff4f7", "#e8487a", "#7c6cf0"] },
+  { k: "sakura", name: "櫻花", desc: "夜色裡的櫻花樹與飄落花瓣", price: 120, sw: ["#25121f", "#ff7aa8", "#a99bff"] },
   { k: "forest", name: "森林", desc: "護眼綠", price: 120, sw: ["#eef5ea", "#d9822b", "#2f8f4e"] },
   { k: "ocean", name: "深海", desc: "深藍夜讀", price: 150, sw: ["#0b2236", "#ffb02e", "#4fd1ff"] },
   { k: "neon", name: "霓虹", desc: "電玩感", price: 200, sw: ["#0a0716", "#ff3fa4", "#2ff3e0"] },
@@ -345,8 +346,57 @@ function pool(filter) {
   if (S.wrongOnly) p = p.filter(x => S.wrong[x.id]);
   return filter ? p.filter(filter) : p;
 }
-function applySkin() { if (S.skin === "default") document.documentElement.removeAttribute("data-skin"); else document.documentElement.dataset.skin = S.skin; auroraCanvas(S.skin === "aurora"); lavaCanvas(S.skin === "lava"); meteors(S.skin === "galaxy"); }
+function applySkin() { if (S.skin === "default") document.documentElement.removeAttribute("data-skin"); else document.documentElement.dataset.skin = S.skin; auroraCanvas(S.skin === "aurora"); lavaCanvas(S.skin === "lava"); sakuraCanvas(S.skin === "sakura"); meteors(S.skin === "galaxy"); }
 
+// 夜櫻：offscreen canvas 一次畫好夜空、月亮和幾棵櫻花樹（遞迴樹枝＋花團），之後每幀只貼圖並疊上飄落的花瓣
+let sakuraRaf = 0, sakuraFit = null;
+function sakuraCanvas(on) {
+  let cv = document.getElementById("sakuraCv");
+  if (!on) { cancelAnimationFrame(sakuraRaf); sakuraRaf = 0; if (sakuraFit) removeEventListener("resize", sakuraFit); sakuraFit = null; if (cv) cv.remove(); return; }
+  if (sakuraRaf) return;
+  if (!cv) { cv = document.createElement("canvas"); cv.id = "sakuraCv"; document.body.prepend(cv); }
+  const g = cv.getContext("2d"), tree = document.createElement("canvas"), tg = tree.getContext("2d"), ps = [];
+  const still = matchMedia("(prefers-reduced-motion:reduce)").matches;
+  let w = 0, h = 0, last = 0;
+  const mkP = (init) => ({ x: Math.random() * w, y: init ? Math.random() * h : -12, vy: .5 + Math.random() * .9, vx: .2 + Math.random() * .5, rot: Math.random() * 6.3, vr: (Math.random() - .5) * .05, s: 4 + Math.random() * 4, ph: Math.random() * 6.3 });
+  const build = () => {
+    w = cv.width = tree.width = innerWidth; h = cv.height = tree.height = innerHeight;
+    const sky = tg.createLinearGradient(0, 0, 0, h); sky.addColorStop(0, "#1a0f2e"); sky.addColorStop(.6, "#36193f"); sky.addColorStop(1, "#5c2848");
+    tg.fillStyle = sky; tg.fillRect(0, 0, w, h);
+    const mr = Math.min(w, h) * .05; tg.save(); tg.shadowColor = "rgba(255,225,240,.8)"; tg.shadowBlur = mr; tg.fillStyle = "#fff0f5"; tg.beginPath(); tg.arc(w * .76, h * .17, mr, 0, 6.3); tg.fill(); tg.restore();
+    // [x 位置比例, 樹高比例, 亂數種子, 透明度（遠的淡一點）]
+    [[.3, .5, 33, .55], [.72, .46, 45, .55], [.03, .8, 7, 1], [.97, .84, 21, 1]].forEach(([xf, hf, seed, al]) => {
+      let a0 = seed; const R = () => (a0 = a0 * 16807 % 2147483647) / 2147483647, H = h * hf, bl = [];
+      tg.globalAlpha = al; tg.strokeStyle = al < 1 ? "#3a1c33" : "#2a1424"; tg.lineCap = "round";
+      const branch = (x, y, len, a, wd, d) => {
+        const x2 = x + Math.cos(a) * len, y2 = y + Math.sin(a) * len;
+        tg.lineWidth = Math.max(1, wd); tg.beginPath(); tg.moveTo(x, y); tg.lineTo(x2, y2); tg.stroke();
+        if (d <= 3) bl.push([x2, y2]);
+        if (d <= 0) return;
+        const n = R() < .3 ? 3 : 2;
+        for (let i = 0; i < n; i++) branch(x2, y2, len * (.72 + R() * .12), a + (R() - .5) * .9 + (i - (n - 1) / 2) * .5, wd * .68, d - 1);
+      };
+      branch(w * xf, h + 10, H * .2, -Math.PI / 2 + (xf < .5 ? .12 : -.12), H * .035, 8);
+      const k = H / 800;
+      for (const [x, y] of bl) for (const [c, rr] of [["rgba(255,150,190,.30)", 26], ["rgba(255,200,220,.38)", 17], ["rgba(255,235,242,.35)", 9]]) { tg.fillStyle = c; tg.beginPath(); tg.arc(x + (R() - .5) * 14 * k, y + (R() - .5) * 14 * k, (rr + R() * 8) * Math.max(.5, k), 0, 6.3); tg.fill(); }
+      tg.globalAlpha = 1;
+    });
+    ps.length = 0; for (let i = 0; i < Math.min(60, w / 30); i++) ps.push(mkP(true));
+  };
+  const draw = ms => {
+    if (document.documentElement.dataset.skin !== "sakura") { sakuraCanvas(false); return; }
+    if (!still) sakuraRaf = requestAnimationFrame(draw);
+    if (!still && (document.hidden || ms - last < 33)) return; last = ms;
+    g.drawImage(tree, 0, 0);
+    for (const p of ps) {
+      p.ph += .02; p.x += p.vx + Math.sin(p.ph) * .6; p.y += p.vy; p.rot += p.vr;
+      if (p.y > h + 12 || p.x > w + 12) Object.assign(p, mkP(false), { x: Math.random() * w * 1.1 - w * .1 });
+      g.save(); g.translate(p.x, p.y); g.rotate(p.rot); g.fillStyle = "rgba(255,205,225,.85)"; g.beginPath(); g.ellipse(0, 0, p.s, p.s * .55, 0, 0, 6.3); g.fill(); g.restore();
+    }
+  };
+  sakuraFit = () => { build(); if (still) draw(0); };
+  addEventListener("resize", sakuraFit); build(); sakuraRaf = requestAnimationFrame(draw);
+}
 // 星空：每隔 15～35 秒劃過一顆流星（一根漸層光條，用 Web Animations 移動，幾乎不耗效能）
 let meteorTm = 0;
 function meteors(on) {
