@@ -7,6 +7,7 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.9.5", date: "2026-10-18", items: ["星空造型：每隔十幾到三十幾秒會劃過一顆流星"] },
   { v: "2.9.4", date: "2026-10-18", items: ["熔岩噴發改成液體感的岩漿柱：噴得更高（約半個畫面以上），一坨一坨融在一起，不再是零散的小點"] },
   { v: "2.9.3", date: "2026-10-18", items: ["「一模熟讀者」改成：字庫選課本 336 字、全部課次、題數 50 題，在選擇題類模式（快問連擊、聽音選義、是非快答、拼字找碴、缺字補完）正確率 90% 以上"] },
   { v: "2.9.2", date: "2026-10-18", items: ["熔岩造型：畫面左右兩側會不定時有岩漿從底部噴起、再拋物線落下"] },
@@ -337,8 +338,26 @@ function pool(filter) {
   if (S.wrongOnly) p = p.filter(x => S.wrong[x.id]);
   return filter ? p.filter(filter) : p;
 }
-function applySkin() { if (S.skin === "default") document.documentElement.removeAttribute("data-skin"); else document.documentElement.dataset.skin = S.skin; auroraCanvas(S.skin === "aurora"); lavaCanvas(S.skin === "lava"); }
+function applySkin() { if (S.skin === "default") document.documentElement.removeAttribute("data-skin"); else document.documentElement.dataset.skin = S.skin; auroraCanvas(S.skin === "aurora"); lavaCanvas(S.skin === "lava"); meteors(S.skin === "galaxy"); }
 
+// 星空：每隔 15～35 秒劃過一顆流星（一根漸層光條，用 Web Animations 移動，幾乎不耗效能）
+let meteorTm = 0;
+function meteors(on) {
+  clearTimeout(meteorTm); meteorTm = 0;
+  if (!on) return;
+  const shoot = () => {
+    if (document.documentElement.dataset.skin !== "galaxy") return;
+    if (!document.hidden) {
+      const el = document.createElement("div"), len = 120 + Math.random() * 100, ang = 20 + Math.random() * 20, dist = Math.max(innerWidth, innerHeight) * .8;
+      el.style.cssText = `position:fixed;z-index:-1;pointer-events:none;left:${Math.random() * innerWidth * .8 + innerWidth * .1}px;top:${Math.random() * innerHeight * .35}px;width:${len}px;height:2px;border-radius:2px;background:linear-gradient(90deg,transparent,rgba(190,215,255,.7) 70%,#fff);box-shadow:0 0 8px 1px rgba(190,215,255,.6);transform-origin:100% 50%;opacity:0`;
+      document.body.append(el);
+      const dx = Math.cos(ang * Math.PI / 180) * dist, dy = Math.sin(ang * Math.PI / 180) * dist, r = `rotate(${ang}deg)`;
+      el.animate([{ transform: `translate(0,0) ${r}`, opacity: 0 }, { opacity: 1, offset: .12 }, { opacity: 1, offset: .7 }, { transform: `translate(${dx}px,${dy}px) ${r}`, opacity: 0 }], { duration: 1100 + Math.random() * 500, easing: "ease-in" }).onfinish = () => el.remove();
+    }
+    meteorTm = setTimeout(shoot, 15000 + Math.random() * 20000);
+  };
+  meteorTm = setTimeout(shoot, 4000 + Math.random() * 6000);
+}
 // 熔岩：左右兩側偶爾有岩漿噴泉從底部衝起。每側一張窄 canvas，用 SVG goo 濾鏡把一堆圓點融成一整坨液體（30 幀、面積小才不吃效能）
 let lavaRaf = 0;
 function lavaCanvas(on) {
