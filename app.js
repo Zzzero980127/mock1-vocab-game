@@ -281,6 +281,20 @@ function speak(w, rate = .9) {
 const sayIf = w => S.autoSay && speak(w);
 let AC = null;
 function ctx() { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === "suspended") AC.resume(); return AC; }
+// 手機解鎖：iOS 靜音鍵會吃掉 Web Audio，且 AudioContext 要在手勢內 resume
+function unlockAudio() {
+  try {
+    if (navigator.audioSession) navigator.audioSession.type = "playback";
+    const ac = ctx(), b = ac.createBuffer(1, 1, 22050), s = ac.createBufferSource();
+    s.buffer = b; s.connect(ac.destination); s.start(0);
+    if (!unlockAudio.el) {
+      const el = unlockAudio.el = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAABErAAABAAgAZGF0YQAAAAA=");
+      el.loop = true; el.volume = .01; el.play().catch(() => {});
+    }
+    if (ac.state === "running") ["touchstart", "touchend", "pointerdown", "click", "keydown"].forEach(e => document.removeEventListener(e, unlockAudio, true));
+  } catch (e) {}
+}
+["touchstart", "touchend", "pointerdown", "click", "keydown"].forEach(e => document.addEventListener(e, unlockAudio, true));
 function tone(notes, type = "sine", vol = .18) {   // notes: [[頻率, 開始秒, 長度秒], ...]
   if (!S.sfx) return;
   try {
