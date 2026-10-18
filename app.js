@@ -8,6 +8,7 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.22.3", date: "2026-10-18", items: ["稀有成就的顏色固定為綠色（以前跟著網頁造型變色，海納百川造型下變成黃色）"] },
   { v: "2.22.2", date: "2026-10-18", items: ["「一模熟讀者」改成題數選 100 題、正確率 90% 以上（原本 50 題）；舊的 50 題正確率不再計入，要重打"] },
   { v: "2.22.1", date: "2026-10-18", items: ["一模全字挑戰：題目固定為「看英文、選中文」（以前會隨機出中文選英文）"] },
   { v: "2.22.0", date: "2026-10-18", items: ["新增「遊戲時間」：只算頁面開著、而且最近 1 分鐘內有操作的時間（掛機、切到別的分頁不算），個人資料看得到，排行榜新增「遊戲時間」榜"] },
@@ -279,7 +280,7 @@ const ACH = [
 const shopKeys = () => [...MODES.filter(o => o.price).map(o => "game:" + o.m), ...SKINS.filter(s => s.price).map(s => "skin:" + s.k), ...AVATARS.filter(a => a[1]).map(a => "av:" + a[0])];
 const ACH_ICON = { welcome: "👋", g10: "🎮", g50: "🕹️", g200: "🔥", lv5: "🌱", lv10: "🌿", lv20: "🌳", lv30: "🏔️", lv40: "👑", lv50: "🌌", w100: "💯", wall: "📚", m15: "🏎️", m10: "🌩️", q2500: "🎯", q4500: "🏹", q4000: "🎓", mbook90: "📖", mbook: "🧠", m4000: "🏫", m6000: "🏛️", r300: "☄️", r600: "💥", s250: "✍️", s250f: "🖋️", l250: "👂", l4000: "🎧", s4000: "🔤", f1: "🤝", f5: "🎉", v1: "⚔️", v10: "🏆", dev: "⚡" };
 const achIcon = a => a.icon || ACH_ICON[a.id] || "🏆";   // 每個成就一個專屬小圖標
-const TIERS = [["普通", "var(--muted)"], ["稀有", "var(--cool)"], ["超稀有", "#4d8dff"], ["史詩", "#a56bff"], ["神話", "#ffc83d"], ["傳說", "#ff6ad5"], ["開發者", "#ff3fa4"]];
+const TIERS = [["普通", "var(--muted)"], ["稀有", "#3ddc84"], ["超稀有", "#4d8dff"], ["史詩", "#a56bff"], ["神話", "#ffc83d"], ["傳說", "#ff6ad5"], ["開發者", "#ff3fa4"]];
 const FREE = ["game:match", "game:quiz", "game:spell", "game:hear", "game:tf", "game:flip", "game:all", "skin:default", "av:🙂", "av:🐱", "av:🐶", "title:單字新手"];
 
 // 升級所需 XP 越來越多：Lv k → k+1 要 300 + 10×(k-1)，累積到 Lv L 共 xpAt(L)
