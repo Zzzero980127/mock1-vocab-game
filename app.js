@@ -8,6 +8,7 @@ const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.17.0", date: "2026-10-18", items: ["新增稀有度「超稀有」（稀有與史詩之間）：Lv 20 超稀有、Lv 30 史詩、Lv 40 神話、Lv 50 傳說", "升級越來越難：Lv k 升 Lv k+1 要 300 + 10×(k-1) XP（Lv 20 需 7410 XP、Lv 50 需 26460 XP）"] },
   { v: "2.16.2", date: "2026-10-18", items: ["修正傳說成就卡片的彩虹效果誤蓋住頭像和 DEV 標章"] },
   { v: "2.16.1", date: "2026-10-18", items: ["個人資料的稱號、展示稱號按鈕依稀有度上色（史詩紫、神話金、傳說彩虹），一眼看出哪個比較帥"] },
   { v: "2.16.0", date: "2026-10-18", items: ["成就分成「一般」「一模」「大考字庫」三區（之後二～五模會各有一區）", "成就改成成長制：同一系列只顯示目前這一階，解完才出現下一階，點卡片可預覽後面的階段"] },
@@ -202,41 +203,46 @@ function mastery(k) {
 const masteryP = (k, th) => () => { const m = mastery(k); return [m.seen >= m.total && m.acc >= th ? m.total : Math.min(m.seen, m.total - 1), m.total]; };
 const masteryNote = k => () => { const m = mastery(k); return `已測 ${m.seen}/${m.total} 字・首答正確率 ${(m.acc * 100).toFixed(1)}%`; };
 const ACH = [
-  { id: "dev", name: "遊戲設計者", desc: "親手打造了這座單字遊樂場", title: "遊戲設計者", gems: 50, tier: 5, hidden: true, icon: "⚡", p: () => [isMeDev() ? 1 : 0, 1] },
+  { id: "dev", name: "遊戲設計者", desc: "親手打造了這座單字遊樂場", title: "遊戲設計者", gems: 50, tier: 6, hidden: true, icon: "⚡", p: () => [isMeDev() ? 1 : 0, 1] },
   { id: "welcome", name: "歡迎加入", desc: "登入遊樂場（Google 或遊客）", title: "新進玩家", gems: 5, tier: 0, p: () => [S.joined ? 1 : 0, 1] },
   { id: "g10", name: "小試身手", desc: "玩 10 場遊戲", title: "熱身完畢", gems: 2, tier: 0, p: () => [S.games, 10] },
   { id: "g50", name: "遊樂場常客", desc: "玩 50 場遊戲", title: "遊樂場常客", gems: 5, tier: 1, p: () => [S.games, 50] },
-  { id: "g200", name: "單字狂熱", desc: "玩 200 場遊戲", title: "單字狂熱者", gems: 15, tier: 2, p: () => [S.games, 200] },
+  { id: "g200", name: "單字狂熱", desc: "玩 200 場遊戲", title: "單字狂熱者", gems: 15, tier: 3, p: () => [S.games, 200] },
   { id: "lv5", name: "漸入佳境", desc: "升到 Lv 5", title: "漸入佳境", gems: 3, tier: 0, p: () => [lvOf(S.xp), 5] },
   { id: "lv10", name: "十全十美", desc: "升到 Lv 10", title: "十級玩家", gems: 8, tier: 1, p: () => [lvOf(S.xp), 10] },
   { id: "lv20", name: "二十級霸主", desc: "升到 Lv 20", title: "二十級霸主", gems: 20, tier: 2, p: () => [lvOf(S.xp), 20] },
+  { id: "lv30", name: "三十級老手", desc: "升到 Lv 30", title: "三十級老手", gems: 30, tier: 3, p: () => [lvOf(S.xp), 30] },
+  { id: "lv40", name: "四十級傳奇", desc: "升到 Lv 40", title: "四十級傳奇", gems: 60, tier: 4, p: () => [lvOf(S.xp), 40] },
+  { id: "lv50", name: "五十級至尊", desc: "升到 Lv 50", title: "五十級至尊", gems: 120, tier: 5, p: () => [lvOf(S.xp), 50] },
   { id: "w100", name: "百字斬", desc: "答對過 100 個不同的單字", title: "百字斬", gems: 5, tier: 1, p: () => [knownN(), 100] },
-  { id: "wall", name: "一模霸主", desc: "336 個一模課本單字全部答對過", title: "一模霸主", gems: 15, tier: 2, p: () => [Object.keys(S.known || {}).filter(i => i < BOOKN).length, BOOKN] },
+  { id: "wall", name: "一模霸主", desc: "336 個一模課本單字全部答對過", title: "一模霸主", gems: 15, tier: 3, p: () => [Object.keys(S.known || {}).filter(i => i < BOOKN).length, BOOKN] },
   { id: "m15", name: "配對快手", desc: "配對消除 15 秒內完成", title: "配對快手", gems: 5, tier: 1, p: () => [S.best.match && S.best.match <= 15 ? 1 : 0, 1] },
-  { id: "m10", name: "閃電配對", desc: "字庫選課本 336 字全部課次，配對消除 8 秒內完成", title: "閃電手", gems: 10, tier: 2, p: () => [fb("match") && fb("match") <= 8 ? 1 : 0, 1] },
+  { id: "m10", name: "閃電配對", desc: "字庫選課本 336 字全部課次，配對消除 8 秒內完成", title: "閃電手", gems: 10, tier: 3, p: () => [fb("match") && fb("match") <= 8 ? 1 : 0, 1] },
   { id: "q2500", name: "連擊大師", desc: "快問連擊拿到 1250 分", title: "連擊大師", gems: 5, tier: 1, p: () => [S.best.quiz || 0, 1250] },
-  { id: "q4500", name: "快問之王", desc: "字庫選課本 336 字、全部課次全選，快問連擊拿到 4500 分", title: "快問之王", gems: 12, tier: 2, p: () => [fb("quiz") || 0, 4500] },
-  { id: "q4000", name: "大考快問王", desc: "字庫選大考 4000（Lv1～4 全選），快問連擊拿到 4500 分", title: "大考快問王", gems: 20, tier: 4, p: () => [fb("quiz", "c4000") || 0, 4500] },
-  { id: "mbook90", name: "一模熟讀者", desc: "字庫選課本 336 字、全部課次，題數選 50 題，在快問連擊、聽音選義、是非快答、拼字找碴、缺字補完任一模式正確率 90% 以上", title: "一模熟讀者", gems: 40, tier: 3, p: () => [Math.min(90, S.best.m90acc || 0), 90], note: () => `50 題最高正確率 ${S.best.m90acc || 0}%` },
-  { id: "mbook", name: "一模滿分腦", desc: "在「一模全字挑戰」一次 336 題全部答對，一題都不能錯", title: "一模滿分腦", gems: 150, tier: 4, icon: "🧠", p: () => [S.best.perfect336 ? 1 : 0, 1] },
-  { id: "m4000", name: "四千單通關", desc: "大考 4000 字（Lv1～4）全部考過，第一次作答正確率 90% 以上", title: "四千單達人", gems: 60, tier: 4, p: masteryP("c4000", .9), note: masteryNote("c4000") },
-  { id: "m6000", name: "六千單宗師", desc: "大考 6000 字（Lv1～6）全部考過，第一次作答正確率 90% 以上", title: "六千單宗師", gems: 120, tier: 4, p: masteryP("c6000", .9), note: masteryNote("c6000") },
+  { id: "q4500", name: "快問之王", desc: "字庫選課本 336 字、全部課次全選，快問連擊拿到 4500 分", title: "快問之王", gems: 12, tier: 3, p: () => [fb("quiz") || 0, 4500] },
+  { id: "q4000", name: "大考快問王", desc: "字庫選大考 4000（Lv1～4 全選），快問連擊拿到 4500 分", title: "大考快問王", gems: 20, tier: 5, p: () => [fb("quiz", "c4000") || 0, 4500] },
+  { id: "mbook90", name: "一模熟讀者", desc: "字庫選課本 336 字、全部課次，題數選 50 題，在快問連擊、聽音選義、是非快答、拼字找碴、缺字補完任一模式正確率 90% 以上", title: "一模熟讀者", gems: 40, tier: 4, p: () => [Math.min(90, S.best.m90acc || 0), 90], note: () => `50 題最高正確率 ${S.best.m90acc || 0}%` },
+  { id: "mbook", name: "一模滿分腦", desc: "在「一模全字挑戰」一次 336 題全部答對，一題都不能錯", title: "一模滿分腦", gems: 150, tier: 5, icon: "🧠", p: () => [S.best.perfect336 ? 1 : 0, 1] },
+  { id: "m4000", name: "四千單通關", desc: "大考 4000 字（Lv1～4）全部考過，第一次作答正確率 90% 以上", title: "四千單達人", gems: 60, tier: 5, p: masteryP("c4000", .9), note: masteryNote("c4000") },
+  { id: "m6000", name: "六千單宗師", desc: "大考 6000 字（Lv1～6）全部考過，第一次作答正確率 90% 以上", title: "六千單宗師", gems: 120, tier: 5, p: masteryP("c6000", .9), note: masteryNote("c6000") },
   { id: "r300", name: "隕石獵人", desc: "單字隕石拿到 200 分", title: "隕石獵人", gems: 6, tier: 1, p: () => [S.best.rock || 0, 200] },
   { id: "s250", name: "拼字工匠", desc: "拼字工坊拿到 250 分", title: "拼字工匠", gems: 6, tier: 1, p: () => [S.best.spell || 0, 250] },
-  { id: "l250", name: "順風耳", desc: "字庫選課本 336 字全部課次，聽音拼字 10 題全部一次聽對（250 分）", title: "聽力王", gems: 10, tier: 2, p: () => [fb("listen") || 0, 250] },
-  { id: "r600", name: "隕石毀滅者", desc: "字庫選課本 336 字全部課次，單字隕石拿到 400 分", title: "隕石毀滅者", gems: 12, tier: 2, p: () => [fb("rock") || 0, 400] },
-  { id: "s250f", name: "拼字大師", desc: "字庫選課本 336 字全部課次，拼字工坊拿到滿分 250", title: "拼字大師", gems: 12, tier: 2, p: () => [fb("spell") || 0, 250] },
-  { id: "l4000", name: "大考順風耳", desc: "字庫選大考 4000（Lv1～4 全選），聽音拼字 10 題全部一次聽對", title: "大考順風耳", gems: 25, tier: 4, p: () => [fb("listen", "c4000") || 0, 250] },
-  { id: "s4000", name: "大考拼字王", desc: "字庫選大考 4000（Lv1～4 全選），拼字工坊拿到滿分 250", title: "大考拼字王", gems: 25, tier: 4, p: () => [fb("spell", "c4000") || 0, 250] },
+  { id: "l250", name: "順風耳", desc: "字庫選課本 336 字全部課次，聽音拼字 10 題全部一次聽對（250 分）", title: "聽力王", gems: 10, tier: 3, p: () => [fb("listen") || 0, 250] },
+  { id: "r600", name: "隕石毀滅者", desc: "字庫選課本 336 字全部課次，單字隕石拿到 400 分", title: "隕石毀滅者", gems: 12, tier: 3, p: () => [fb("rock") || 0, 400] },
+  { id: "s250f", name: "拼字大師", desc: "字庫選課本 336 字全部課次，拼字工坊拿到滿分 250", title: "拼字大師", gems: 12, tier: 3, p: () => [fb("spell") || 0, 250] },
+  { id: "l4000", name: "大考順風耳", desc: "字庫選大考 4000（Lv1～4 全選），聽音拼字 10 題全部一次聽對", title: "大考順風耳", gems: 25, tier: 5, p: () => [fb("listen", "c4000") || 0, 250] },
+  { id: "s4000", name: "大考拼字王", desc: "字庫選大考 4000（Lv1～4 全選），拼字工坊拿到滿分 250", title: "大考拼字王", gems: 25, tier: 5, p: () => [fb("spell", "c4000") || 0, 250] },
   { id: "f1", name: "交個朋友", desc: "加 1 位好友", title: "好夥伴", gems: 3, tier: 0, p: () => [S.friendsN || 0, 1] },
   { id: "f5", name: "人氣王", desc: "加 5 位好友", title: "人氣王", gems: 8, tier: 1, p: () => [S.friendsN || 0, 5] },
   { id: "v1", name: "首勝", desc: "對戰贏 1 場", title: "初露鋒芒", gems: 3, tier: 0, p: () => [S.wins || 0, 1] },
-  { id: "v10", name: "對戰常勝軍", desc: "對戰贏 10 場", title: "對戰常勝軍", gems: 15, tier: 2, p: () => [S.wins || 0, 10] },
+  { id: "v10", name: "對戰常勝軍", desc: "對戰贏 10 場", title: "對戰常勝軍", gems: 15, tier: 3, p: () => [S.wins || 0, 10] },
 ];
-const TIERS = [["普通", "var(--muted)"], ["稀有", "var(--cool)"], ["史詩", "#a56bff"], ["神話", "#ffc83d"], ["傳說", "#ff6ad5"], ["開發者", "#ff3fa4"]];
+const TIERS = [["普通", "var(--muted)"], ["稀有", "var(--cool)"], ["超稀有", "#4d8dff"], ["史詩", "#a56bff"], ["神話", "#ffc83d"], ["傳說", "#ff6ad5"], ["開發者", "#ff3fa4"]];
 const FREE = ["game:match", "game:quiz", "game:spell", "game:hear", "game:tf", "game:flip", "game:all", "skin:default", "av:🙂", "av:🐱", "av:🐶", "title:單字新手"];
 
-const lvOf = xp => Math.floor(xp / 300) + 1;
+// 升級所需 XP 越來越多：Lv k → k+1 要 300 + 10×(k-1)，累積到 Lv L 共 xpAt(L)
+const xpAt = L => 300 * (L - 1) + 5 * (L - 1) * (L - 2), lvCost = L => 300 + 10 * (L - 1);
+const lvOf = xp => { let L = Math.max(1, Math.floor(xp / 300) + 1); while (L > 1 && xpAt(L) > xp) L--; while (xpAt(L + 1) <= xp) L++; return L; };
 let S = { xp: 0, wrong: {}, best: {}, lessons: LESSONS.slice(), bank: "book", lvs: [1, 2, 3, 4, 5, 6], wrongOnly: false, autoSay: true, sfx: true,
   owned: FREE.slice(), skin: "default", name: "", avatar: "🙂", title: "單字新手", games: 0, wins: 0, losses: 0, seenVer: "", gems: 0, ach: {}, known: {}, first: {}, joined: "" };
 try { Object.assign(S, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (e) {}
@@ -592,14 +598,14 @@ const titleHtml = (title, dev) => {
   const a = ACH.find(x => x.title === title && !x.hidden);   // 稱號顏色 = 對應成就的稀有度顏色，神話以上再加光暈
   if (!a || a.tier < 1) return esc(title);
   const c = TIERS[a.tier][1];
-  if (a.tier === 4) return `<span class="rbt" style="font-weight:700">${esc(title)}</span>`;
-  return `<span style="color:${c};font-weight:700${a.tier >= 3 ? `;text-shadow:0 0 10px ${c}` : ""}">${esc(title)}</span>`;
+  if (a.tier === 5) return `<span class="rbt" style="font-weight:700">${esc(title)}</span>`;
+  return `<span style="color:${c};font-weight:700${a.tier >= 4 ? `;text-shadow:0 0 10px ${c}` : ""}">${esc(title)}</span>`;
 };
 function renderTop() {
-  const L = lvOf(S.xp), into = S.xp - (L - 1) * 300;
+  const L = lvOf(S.xp), into = S.xp - xpAt(L), need = lvCost(L);
   $("#meAv").textContent = S.avatar; $("#meName").innerHTML = nameHtml(S.name, isMeDev()); $("#meTitle").innerHTML = titleHtml(S.title, isMeDev()); $("#meBtn").classList.toggle("dev", isMeDev());
   $("#coins").textContent = S.coins; $("#gems").textContent = S.gems; $("#lv").textContent = L; $("#xp").textContent = S.xp;
-  $("#xpNext").textContent = `再 ${300 - into} XP 升 Lv ${L + 1}`; $("#xpFill").style.width = into / 3 + "%";
+  $("#xpNext").textContent = `再 ${need - into} XP 升 Lv ${L + 1}`; $("#xpFill").style.width = into / need * 100 + "%";
 }
 function bestText(m) {
   const b = S.best[m]; if (!b) return "還沒玩過";
@@ -708,7 +714,7 @@ function checkAch() {
 }
 function bigAch(a, done) {
   const t = TIERS[a.tier]; sfx.epic();
-  const el = document.createElement("div"); el.className = "fx" + (a.tier === 4 ? " rb" : ""); el.style.setProperty("--tc", t[1]);
+  const el = document.createElement("div"); el.className = "fx" + (a.tier === 5 ? " rb" : ""); el.style.setProperty("--tc", t[1]);
   const cols = ["#ffd76b", "#ff8a3d", "#ff3fa4", "#6be3ff", "#b18cff", "#ffffff"];
   const sparks = Array.from({ length: 40 }, (_, i) => {
     const ang = i / 40 * Math.PI * 2 + Math.random() * .3, dist = 140 + Math.random() * 260;
@@ -724,7 +730,7 @@ function bigAch(a, done) {
 }
 function popAch() {
   const a = achQ[0]; if (!a) return;
-  if (a.tier >= 2) return bigAch(a, () => { achQ.shift(); popAch(); });
+  if (a.tier >= 3) return bigAch(a, () => { achQ.shift(); popAch(); });
   sfx.ding();
   const el = document.createElement("div"); el.className = "achpop";
   el.innerHTML = `<span class="trophy" style="color:${TIERS[a.tier][1]}">🏆</span><span><small>成就解鎖・${TIERS[a.tier][0]}</small><b>${esc(a.name)}</b><small>稱號「${esc(a.title)}」・<span style="color:var(--gem)">+${a.gems} 寶石</span></small></span>`;
@@ -735,7 +741,7 @@ function popAch() {
 // 成就分區與成長鏈：每條鏈依序解鎖，畫面只顯示目前這一階，點卡片可預覽後面幾階。之後加二～五模就在 ACH_CATS 加一區、CHAINS 加一組
 const ACH_CATS = [["gen", "一般"], ["m1", "一模"], ["bank", "大考字庫"]];
 const CHAINS = {
-  gen: [["welcome"], ["g10", "g50", "g200"], ["lv5", "lv10", "lv20"], ["w100"], ["m15"], ["q2500"], ["r300"], ["s250"], ["f1", "f5"], ["v1", "v10"], ["dev"]],
+  gen: [["welcome"], ["g10", "g50", "g200"], ["lv5", "lv10", "lv20", "lv30", "lv40", "lv50"], ["w100"], ["m15"], ["q2500"], ["r300"], ["s250"], ["f1", "f5"], ["v1", "v10"], ["dev"]],
   m1: [["wall", "mbook90", "mbook"], ["m10"], ["q4500"], ["l250"], ["r600"], ["s250f"]],
   bank: [["m4000", "m6000"], ["q4000"], ["l4000"], ["s4000"]],
 };
@@ -744,10 +750,10 @@ const achById = id => ACH.find(a => a.id === id);
 const chainsOf = cat => CHAINS[cat].map(ids => ids.map(achById).filter(a => a && (!a.hidden || S.ach[a.id]))).filter(c => c.length);
 const achCard = (a, n, N, chainIdx) => {
   const got = S.ach[a.id], [c, g] = a.p(), t = TIERS[a.tier];
-  return `<div class="ach ${got ? "got" : ""} ${got && a.tier >= 2 ? "epic" : ""} ${a.tier === 4 ? "rb" : ""}" style="--tc:${t[1]};${N > 1 ? "cursor:pointer" : ""}" ${N > 1 ? `data-chain="${chainIdx}" role="button" tabindex="0"` : ""}>
+  return `<div class="ach ${got ? "got" : ""} ${got && a.tier >= 3 ? "epic" : ""} ${a.tier === 5 ? "rb" : ""}" style="--tc:${t[1]};${N > 1 ? "cursor:pointer" : ""}" ${N > 1 ? `data-chain="${chainIdx}" role="button" tabindex="0"` : ""}>
         <div class="bar"><span class="trophy">${got ? a.icon || "🏆" : "🔒"}</span><span class="tier">${t[0]}</span></div>
         <b>${esc(a.name)}</b><small>${esc(a.desc)}</small>
-        <div class="plate"><span class="av">${S.avatar}</span><span><b>${nameHtml(S.name, isMeDev())}</b><small>${a.id === "dev" ? titleHtml(a.title, true) : a.tier === 4 ? `<span class="rbt">${esc(a.title)}</span>` : esc(a.title)}</small></span></div>
+        <div class="plate"><span class="av">${S.avatar}</span><span><b>${nameHtml(S.name, isMeDev())}</b><small>${a.id === "dev" ? titleHtml(a.title, true) : a.tier === 5 ? `<span class="rbt">${esc(a.title)}</span>` : esc(a.title)}</small></span></div>
         <small>獎勵：稱號「${esc(a.title)}」・<span style="color:var(--gem)">${a.gems} 寶石</span></small>
         ${got ? `<small class="ok">${a.id === "welcome" ? "加入日期" : "解鎖於"} ${got}</small>`
           : `<div class="xpbar"><i style="width:${Math.min(1, c / g) * 100}%"></i></div><small>${Math.min(c, g)} / ${g}</small>${a.note ? `<small>${a.note()}</small>` : ""}`}
@@ -771,7 +777,7 @@ $("#achBox").onclick = e => {
   modal(`<h2>成就系列：${esc(ch[0].name)}${ch.length > 1 ? " ➜ …" : ""}</h2><div style="display:flex;flex-direction:column;gap:10px;margin:10px 0">${ch.map((a, i) => {
     const got = S.ach[a.id], [p, g] = a.p(), t = TIERS[a.tier];
     return `<div style="border:1.5px solid ${got ? t[1] : "var(--line)"};border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:4px">
-      <div class="bar"><b>第 ${i + 1} 階・${esc(a.name)}</b><span class="tier ${a.tier === 4 ? "rbt" : ""}" style="--tc:${t[1]};color:${t[1]};border:1px solid ${t[1]};border-radius:6px;padding:0 6px;font-size:11px;font-weight:700">${t[0]}</span></div>
+      <div class="bar"><b>第 ${i + 1} 階・${esc(a.name)}</b><span class="tier ${a.tier === 5 ? "rbt" : ""}" style="--tc:${t[1]};color:${t[1]};border:1px solid ${t[1]};border-radius:6px;padding:0 6px;font-size:11px;font-weight:700">${t[0]}</span></div>
       <small class="muted">${esc(a.desc)}</small>
       <small>獎勵：稱號「${esc(a.title)}」・<span style="color:var(--gem)">${a.gems} 寶石</span></small>
       <small class="${got ? "ok" : "muted"}" style="${got ? "color:var(--good);font-weight:700" : ""}">${got ? `✔ 已解鎖 ${got}` : `進度 ${Math.min(p, g)} / ${g}`}</small></div>`; }).join("")}</div>
