@@ -8,11 +8,13 @@ const B3N = W.filter(x => x.b3).length;
 const $ = s => document.querySelector(s);
 const LESSONS = [...new Set(W.filter(isB1).map(x => x.l))];
 const LESSONS3 = [...new Set(W.filter(x => x.b3).map(x => x.l))];
+const L2M = [...LESSONS, ...LESSONS3];   // 二模：一到三冊全部課次
 const volL = v => v === "all" ? LESSONS.slice() : LESSONS.filter(l => l[1] === v);   // 依冊別取課次（B1L1 → 第 1 冊）
 const KEY = "mock1-vocab-game";
 
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
+  { v: "2.26.0", date: "2026-10-25", items: ["課本字庫的冊別列調整：「第三冊」移到第二排（二模・一模・第一冊・第二冊・第三冊），新增「二模（一到三冊）」一次考 512 字"] },
   { v: "2.25.1", date: "2026-10-25", items: ["新增兩款成就限定背景：第三冊熟讀者（神話・翠綠星陣）、第三冊滿分腦（傳說・金橘脈衝）"] },
   { v: "2.25.0", date: "2026-10-25", items: ["新增字庫「第三冊」（176 字、B3L1～B3L6），一模 336 字不受影響", "新增模式「第三冊全字挑戰」，和新成就分區「第三冊」：第三冊霸主、快問王、順風耳、拼字王、熟讀者、滿分腦"] },
   { v: "2.24.0", date: "2026-10-18", items: ["每個神話、傳說成就都有自己的限定背景動畫（共 22 款）：神話 2 層動畫、傳說 4 層動畫，所以傳說一定比神話華麗；在背景頁「成就限定」分頁預覽，解鎖成就才能使用"] },
@@ -344,7 +346,7 @@ const FREE = ["game:match", "game:quiz", "game:spell", "game:hear", "game:tf", "
 // 升級所需 XP 越來越多：Lv k → k+1 要 300 + 10×(k-1)，累積到 Lv L 共 xpAt(L)
 const xpAt = L => 300 * (L - 1) + 5 * (L - 1) * (L - 2), lvCost = L => 300 + 10 * (L - 1);
 const lvOf = xp => { let L = Math.max(1, Math.floor(xp / 300) + 1); while (L > 1 && xpAt(L) > xp) L--; while (xpAt(L + 1) <= xp) L++; return L; };
-let S = { xp: 0, wrong: {}, best: {}, lessons: LESSONS.slice(), lessons3: LESSONS3.slice(), bank: "book", lvs: [1, 2, 3, 4, 5, 6], wrongOnly: false, autoSay: true, sfx: true,
+let S = { xp: 0, wrong: {}, best: {}, lessons: LESSONS.slice(), lessons3: LESSONS3.slice(), l2m: [...LESSONS, ...LESSONS3], bank: "book", lvs: [1, 2, 3, 4, 5, 6], wrongOnly: false, autoSay: true, sfx: true,
   owned: FREE.slice(), skin: "default", name: "", avatar: "🙂", title: "單字新手", games: 0, wins: 0, losses: 0, seenVer: "", gems: 0, ach: {}, known: {}, first: {}, joined: "" };
 try { Object.assign(S, JSON.parse(localStorage.getItem(KEY) || "{}")); } catch (e) {}
 if (!S.first) S.first = {};   // 每個字「第一次作答」對或錯（1/0），算熟練度正確率用，之後重複作答不影響
@@ -475,10 +477,10 @@ function miss(x) { if (S.first[x.id] === undefined) S.first[x.id] = 0; S.wrong[x
 function hit(x) { if (S.first[x.id] === undefined) S.first[x.id] = 1; S.known[x.id] = 1; if (S.wrong[x.id]) { if (--S.wrong[x.id] <= 0) delete S.wrong[x.id]; save(); hud(); } }
 
 const bankMax = () => ({ c3000: 3, c4000: 4, c6000: 6 })[S.bank] || 0;
-const uni = () => S.bank === "book" ? W.filter(isB1) : S.bank === "book3" ? W.filter(x => x.b3) : W.filter(x => x.b && x.lv <= bankMax());   // 目前字庫全部單字（出干擾選項用）
+const uni = () => S.bank === "book" ? W.filter(isB1) : S.bank === "book2m" ? W.filter(x => !x.b) : S.bank === "book3" ? W.filter(x => x.b3) : W.filter(x => x.b && x.lv <= bankMax());   // 目前字庫全部單字（出干擾選項用）
 const lvSel = () => { const m = S.lvs.filter(v => v <= bankMax()); return m.length ? m : [1, 2, 3, 4, 5, 6]; };   // 切字庫後選的級別超出範圍就當全選
-const fullScope = () => !S.wrongOnly && (S.bank === "book" ? LESSONS.every(l => S.lessons.includes(l)) : S.bank === "book3" ? LESSONS3.every(l => S.lessons3.includes(l)) : lvSel().length >= bankMax());
-const bankKey = () => S.bank === "book" ? "book" : S.bank === "book3" ? "book3" : "c" + (bankMax() * 1000 || 6000);   // 與字庫對應的紀錄鍵
+const fullScope = () => !S.wrongOnly && (S.bank === "book" ? LESSONS.every(l => S.lessons.includes(l)) : S.bank === "book3" ? LESSONS3.every(l => S.lessons3.includes(l)) : S.bank === "book2m" ? L2M.every(l => S.l2m.includes(l)) : lvSel().length >= bankMax());
+const bankKey = () => S.bank === "book" ? "book" : S.bank === "book3" ? "book3" : S.bank === "book2m" ? "book2m" : "c" + (bankMax() * 1000 || 6000);   // 與字庫對應的紀錄鍵
 const stdN = m => ({ tf: 20, spell: 10, listen: 10 })[m] || 15;   // 各模式的標準題數
 const nqN = m => S.nq || stdN(m);   // S.nq=0 表示標準；自訂題數時分數自然隨題數增減，但不計入成就用的全範圍紀錄
 function recFull(m, v) {   // 字庫全選時另外記一份「全範圍紀錄」，高階成就看這個
@@ -486,9 +488,9 @@ function recFull(m, v) {   // 字庫全選時另外記一份「全範圍紀錄�
   if (o == null || (m === "match" ? v < o : v > o)) S.best[k] = v;
 }
 const fb = (m, k = "book") => S.best[`f_${m}_${k}`];
-const BANKS = [["book", "課本 336"], ["book3", "第三冊 " + B3N], ["c3000", "模考前兩次 3000"], ["c4000", "模考後三次 4000"], ["c6000", "大考 6000"]];
+const BANKS = [["book", "課本 " + (BOOKN + B3N)], ["c3000", "模考前兩次 3000"], ["c4000", "模考後三次 4000"], ["c6000", "大考 6000"]];
 function pool(filter) {
-  let p = S.bank === "book" ? W.filter(x => isB1(x) && S.lessons.includes(x.l)) : S.bank === "book3" ? W.filter(x => x.b3 && S.lessons3.includes(x.l)) : uni().filter(x => lvSel().includes(x.lv));
+  let p = S.bank === "book" ? W.filter(x => isB1(x) && S.lessons.includes(x.l)) : S.bank === "book3" ? W.filter(x => x.b3 && S.lessons3.includes(x.l)) : S.bank === "book2m" ? W.filter(x => !x.b && S.l2m.includes(x.l)) : uni().filter(x => lvSel().includes(x.lv));
   if (S.wrongOnly) p = p.filter(x => S.wrong[x.id]);
   return filter ? p.filter(filter) : p;
 }
@@ -752,17 +754,17 @@ function hud() {
   }).join("");
 }
 function renderChips() {
-  const bk = BANKS.map(([k, n]) => `<button class="chip" data-bank="${k}" aria-pressed="${S.bank === k}">${n}</button>`).join("") + `<span style="flex-basis:100%"></span>`;
-  if (S.bank === "book") {
-    const vol = S.vol || "all", VL = volL(vol), all = VL.every(l => S.lessons.includes(l));
+  const isBk = ["book", "book3", "book2m"].includes(S.bank);
+  const bk = BANKS.map(([k, n]) => `<button class="chip" data-bank="${k}" aria-pressed="${k === "book" ? isBk : S.bank === k}">${n}</button>`).join("") + `<span style="flex-basis:100%"></span>`;
+  if (isBk) {
+    const vol = S.bank === "book2m" ? "2m" : S.bank === "book3" ? "3" : (S.vol || "all");
+    const rows = [["2m", "二模（一到三冊）"], ["all", "一模（一＋二冊）"], ["1", "第一冊"], ["2", "第二冊"], ["3", "第三冊"]];
+    const VL = S.bank === "book2m" ? L2M : S.bank === "book3" ? LESSONS3 : volL(vol), key = S.bank === "book2m" ? "l2m" : S.bank === "book3" ? "lessons3" : "lessons", dk = S.bank === "book3" ? "l3" : "l";
+    const all = VL.every(l => S[key].includes(l));
     $("#chips").innerHTML = bk +
-      [["all", "一模（一＋二冊）"], ["1", "第一冊"], ["2", "第二冊"]].map(([v, n]) => `<button class="chip" data-vol="${v}" aria-pressed="${vol === v}">${n}</button>`).join("") + `<span style="flex-basis:100%"></span>` +
-      `<button class="chip" data-l="*" aria-pressed="${all}">全部</button>` +
-      VL.map(l => `<button class="chip" data-l="${l}" aria-pressed="${!all && S.lessons.includes(l)}">${l}</button>`).join("");
-  } else if (S.bank === "book3") {
-    const all = LESSONS3.every(l => S.lessons3.includes(l));
-    $("#chips").innerHTML = bk + `<button class="chip" data-l3="*" aria-pressed="${all}">全部</button>` +
-      LESSONS3.map(l => `<button class="chip" data-l3="${l}" aria-pressed="${!all && S.lessons3.includes(l)}">${l}</button>`).join("");
+      rows.map(([v, n]) => `<button class="chip" data-vol="${v}" aria-pressed="${vol === v}">${n}</button>`).join("") + `<span style="flex-basis:100%"></span>` +
+      `<button class="chip" data-${dk}="*" aria-pressed="${all}">全部</button>` +
+      VL.map(l => `<button class="chip" data-${dk}="${l}" aria-pressed="${!all && S[key].includes(l)}">${l}</button>`).join("");
   } else {
     const LV = Array.from({ length: bankMax() }, (_, i) => i + 1), sel = S.lvs.filter(v => v <= bankMax()), all = sel.length === LV.length;
     $("#chips").innerHTML = bk + `<button class="chip" data-lv="*" aria-pressed="${all}">全部</button>` +
@@ -771,7 +773,7 @@ function renderChips() {
 }
 $("#chips").onclick = e => {
   const t = e.target.closest("button"); if (!t) return;
-  if (t.dataset.bank) { S.bank = t.dataset.bank; save(); renderChips(); hud(); return; }
+  if (t.dataset.bank) { if (t.dataset.bank === "book" && ["book", "book3", "book2m"].includes(S.bank)) return; S.bank = t.dataset.bank; save(); renderChips(); hud(); return; }
   if (t.dataset.lv) {
     const LV = Array.from({ length: bankMax() }, (_, i) => i + 1), v = t.dataset.lv, sel = S.lvs.filter(x => x <= bankMax());
     if (v === "*") S.lvs = [1, 2, 3, 4, 5, 6];
@@ -785,7 +787,19 @@ $("#chips").onclick = e => {
     else { S.lessons3 = S.lessons3.includes(l) ? S.lessons3.filter(x => x !== l) : [...S.lessons3, l]; if (!S.lessons3.length) S.lessons3 = LESSONS3.slice(); }
     save(); renderChips(); hud(); return;
   }
-  if (t.dataset.vol) { S.vol = t.dataset.vol; S.lessons = volL(S.vol); save(); renderChips(); hud(); return; }
+  if (t.dataset.vol) {
+    const v = t.dataset.vol;
+    if (v === "2m") { S.bank = "book2m"; S.l2m = L2M.slice(); }
+    else if (v === "3") { S.bank = "book3"; S.lessons3 = LESSONS3.slice(); }
+    else { S.bank = "book"; S.vol = v; S.lessons = volL(v); }
+    save(); renderChips(); hud(); return; }
+  if (t.dataset.l && S.bank === "book2m") {
+    const l = t.dataset.l;
+    if (l === "*") S.l2m = L2M.slice();
+    else if (L2M.every(x => S.l2m.includes(x))) S.l2m = [l];
+    else { S.l2m = S.l2m.includes(l) ? S.l2m.filter(x => x !== l) : [...S.l2m, l]; if (!S.l2m.length) S.l2m = L2M.slice(); }
+    save(); renderChips(); hud(); return;
+  }
   const l = t.dataset.l; if (!l) return;
   const VL = volL(S.vol || "all");
   if (l === "*") S.lessons = VL.slice();
@@ -1117,7 +1131,7 @@ $("#menu").onclick = e => { const b = e.target.closest(".mode"); if (b) start(b.
 // vs 房間與單人共用，題目都是純資料（id、選項），所以所有人看到一模一樣的題目。
 const MC_KINDS = ["quiz", "hear", "tf", "spot", "blank"];
 const MC_TIME = { tf: 6000 };
-const scopeMul = () => { const n = S.wrongOnly ? 1 : S.bank === "book" ? S.lessons.length : S.bank === "book3" ? S.lessons3.length : lvSel().length, t = S.bank === "book" ? LESSONS.length : S.bank === "book3" ? LESSONS3.length : bankMax(); return t > 1 ? 1 + (Math.min(n, t) - 1) / (t - 1) : 1; };   // 範圍加成：選 1 課 ×1，每多一課線性增加，全選 ×2
+const scopeMul = () => { const n = S.wrongOnly ? 1 : S.bank === "book" ? S.lessons.length : S.bank === "book3" ? S.lessons3.length : S.bank === "book2m" ? S.l2m.length : lvSel().length, t = S.bank === "book" ? LESSONS.length : S.bank === "book3" ? LESSONS3.length : S.bank === "book2m" ? L2M.length : bankMax(); return t > 1 ? 1 + (Math.min(n, t) - 1) / (t - 1) : 1; };   // 範圍加成：選 1 課 ×1，每多一課線性增加，全選 ×2
 const tierPts = f => f < .25 ? 1 : f < .5 ? .5 : f < .75 ? .25 : 0;   // 計時模式的階梯給分：把限時切四等份，依序拿 100%／50%／25%／0%
 const VOW = "aeiou", CON = "bcdfghjklmnpqrstvwxyz";
 function misspell(w) {
