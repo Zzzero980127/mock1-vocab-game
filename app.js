@@ -15,6 +15,7 @@ const KEY = "mock1-vocab-game";
 // ---------- 更新日誌（新版本加在最上面） ----------
 const CHANGELOG = [
   { v: "2.26.0", date: "2026-10-25", items: ["課本字庫的冊別列調整：「第三冊」移到第二排（二模・一模・第一冊・第二冊・第三冊），新增「二模（一到三冊）」一次考 512 字"] },
+  { v: "2.26.0", date: "2026-10-25", items: ["背景頁新增「📝 模考限定」分頁：一模、第三冊、大考字庫的成就專屬背景集中在這裡，依冊別分組（原本在「成就限定」的這幾款搬過來）"] },
   { v: "2.25.1", date: "2026-10-25", items: ["新增兩款成就限定背景：第三冊熟讀者（神話・翠綠星陣）、第三冊滿分腦（傳說・金橘脈衝）"] },
   { v: "2.25.0", date: "2026-10-25", items: ["新增字庫「第三冊」（176 字、B3L1～B3L6），一模 336 字不受影響", "新增模式「第三冊全字挑戰」，和新成就分區「第三冊」：第三冊霸主、快問王、順風耳、拼字王、熟讀者、滿分腦"] },
   { v: "2.24.0", date: "2026-10-18", items: ["每個神話、傳說成就都有自己的限定背景動畫（共 22 款）：神話 2 層動畫、傳說 4 層動畫，所以傳說一定比神話華麗；在背景頁「成就限定」分頁預覽，解鎖成就才能使用"] },
@@ -1025,11 +1026,16 @@ function startPreview(k) {
   bar.querySelector("button").onclick = endPreview; document.body.append(bar);
 }
 let bgSub = "coin";
+const MOCK_GROUPS = [["一模（第一＋二冊）", ["mbook90", "mbook"]], ["第三冊", ["m3acc", "mbook3"]], ["大考字庫", ["m4000", "m6000", "q4000", "l4000", "s4000"]]];   // 模考限定背景：以成就 id 分冊，之後加二～五模就在這裡加一組
+const bgOf = s => MOCK_GROUPS.some(g => g[1].includes(s.ach)) ? "mock" : s.ach ? "ach" : s.cur === "gem" ? "gem" : "coin";
 function renderBg() {
-  $("#bgBox").innerHTML = `<div class="card"><h2>背景預覽</h2><p class="muted" style="margin:0">所有網頁造型的取得方式與價格。按「預覽」可以先看整個網站換上去的樣子，不會花錢也不會存檔。</p></div><div class="card"><div class="chips" style="margin-bottom:12px">${[["coin", "🪙 金幣"], ["gem", "💎 寶石"], ["ach", "🏆 成就限定"]].map(([k, n]) => `<button class="chip" data-sub="${k}" aria-pressed="${bgSub === k}">${n}</button>`).join("")}</div><div class="shop">` +
-    SKINS.filter(s => (s.ach ? "ach" : s.cur === "gem" ? "gem" : "coin") === bgSub).sort((a, b) => (a.price || 0) - (b.price || 0)).map(s => { const have = owns("skin:" + s.k);
-      return `<div class="item ${S.skin === s.k ? "on" : ""}"><span class="swatch">${s.sw.map(c => `<i style="background:${c}"></i>`).join("")}</span><b>${s.name}</b><small>${s.desc}</small><small>${skinHow(s)}</small>
-        <button class="btn small ghost" data-pv="${s.k}" type="button">預覽</button>${have ? (S.skin === s.k ? `<span class="muted">使用中</span>` : `<button class="btn small" data-use="skin:${s.k}" type="button">使用</button>`) : `<span class="muted">未解鎖</span>`}</div>`; }).join("") + `</div></div>`;
+  $("#bgBox").innerHTML = `<div class="card"><h2>背景預覽</h2><p class="muted" style="margin:0">所有網頁造型的取得方式與價格。按「預覽」可以先看整個網站換上去的樣子，不會花錢也不會存檔。</p></div><div class="card"><div class="chips" style="margin-bottom:12px">${[["coin", "🪙 金幣"], ["gem", "💎 寶石"], ["ach", "🏆 成就限定"], ["mock", "📝 模考限定"]].map(([k, n]) => `<button class="chip" data-sub="${k}" aria-pressed="${bgSub === k}">${n}</button>`).join("")}</div>${bgSub === "mock" ? "" : `<div class="shop">`}` +
+    (bgSub === "mock" ? MOCK_GROUPS.map(([gn, ids]) => `<h3 style="margin:14px 0 8px">${gn}</h3><div class="shop">` + SKINS.filter(s => ids.includes(s.ach)).map(bgItem).join("") + `</div>`).join("") + `</div>` : SKINS.filter(s => bgOf(s) === bgSub).sort((a, b) => (a.price || 0) - (b.price || 0)).map(bgItem).join("") + `</div></div>`);
+}
+function bgItem(s) {
+  const have = owns("skin:" + s.k);
+  return `<div class="item ${S.skin === s.k ? "on" : ""}"><span class="swatch">${s.sw.map(c => `<i style="background:${c}"></i>`).join("")}</span><b>${s.name}</b><small>${s.desc}</small><small>${skinHow(s)}</small>
+        <button class="btn small ghost" data-pv="${s.k}" type="button">預覽</button>${have ? (S.skin === s.k ? `<span class="muted">使用中</span>` : `<button class="btn small" data-use="skin:${s.k}" type="button">使用</button>`) : `<span class="muted">未解鎖</span>`}</div>`;
 }
 $("#bgBox").onclick = e => {
   const b = e.target.closest("button"); if (!b) return;
